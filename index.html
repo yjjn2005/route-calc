@@ -6,135 +6,169 @@
 <title>가는길 계산 · 대중교통 택시 자가용 비교</title>
 <meta name="theme-color" content="#12263F">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;700&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <style>
 :root{
-  --ink:#12263F; --ink2:#4A5B70; --paper:#F1F4F7; --card:#fff; --line:#D5DCE4;
-  --go:#0F766E; --go-d:#0B5A54; --gold:#F5A200; --warn:#B4361F; --soft:#E7EEF3;
+  --navy:#0B1B2E; --navy2:#16304F; --gold:#B08A57; --gold-l:#E6D3AE;
+  --ink:#0B1B2E; --ink2:#586479; --paper:#F1F2F4; --card:#FFFFFF; --line:#E1E4E9; --soft:#F5F6F8;
+  --hero:#0B1B2E; --btn:#0B1B2E; --btn-t:#F1E2C2; --warn:#B4361F; --ok:#0E6B5C;
+  --serif:"Noto Serif KR","Nanum Myeongjo","Batang",serif;
+  --sans:"Pretendard Variable",Pretendard,-apple-system,"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif;
   color-scheme: light dark;
 }
 @media (prefers-color-scheme:dark){
-  :root{--ink:#E8EEF5;--ink2:#9FB0C3;--paper:#0E1620;--card:#16212E;--line:#2A3A4C;--go:#2BB3A6;--go-d:#1F8F85;--soft:#1C2A3A;--warn:#FF8A73}
+  :root{--ink:#EEF1F5;--ink2:#9AA8BB;--paper:#080F18;--card:#111C2A;--line:#22324A;--soft:#0C1622;--hero:#050B12;--gold:#D2AE78;--btn:#D2AE78;--btn-t:#0B1B2E;--warn:#FF8A73;--ok:#4FC3AE}
 }
 *{box-sizing:border-box}
-html,body{margin:0;background:var(--paper);color:var(--ink);font-family:-apple-system,"Apple SD Gothic Neo","Pretendard","Noto Sans KR","Malgun Gothic",sans-serif;-webkit-text-size-adjust:100%}
-body{padding:env(safe-area-inset-top) 0 calc(24px + env(safe-area-inset-bottom));line-height:1.5}
-.wrap{max-width:760px;margin:0 auto;padding:0 14px}
-header{padding:20px 0 10px}
-h1{font-size:24px;margin:0;letter-spacing:-.02em}
-header p{margin:4px 0 0;color:var(--ink2);font-size:14px}
-.panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-top:12px}
-label{display:block;font-size:13px;font-weight:600;color:var(--ink2);margin:10px 0 4px}
-label:first-child{margin-top:0}
-input,select{width:100%;font:inherit;font-size:16px;padding:11px 12px;border:1px solid var(--line);border-radius:10px;background:var(--paper);color:var(--ink)}
-input:focus,select:focus,button:focus-visible,summary:focus-visible,a:focus-visible{outline:2px solid var(--go);outline-offset:1px}
-.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
-.chip{font-size:13px;padding:5px 10px;border-radius:999px;border:1px solid var(--line);background:var(--soft);color:var(--ink);cursor:pointer}
-.row{display:flex;gap:8px;align-items:end}
-.row>*{flex:1}
-.swap{flex:0 0 auto;width:44px;height:44px;border-radius:10px;border:1px solid var(--line);background:var(--soft);color:var(--ink);font-size:18px;cursor:pointer}
-.btn{width:100%;margin-top:14px;padding:14px;font-size:17px;font-weight:700;border:0;border-radius:12px;background:var(--go);color:#fff;cursor:pointer}
-.btn:active{background:var(--go-d)}
-.btn[disabled]{opacity:.6}
-.btn.sm{margin-top:8px;padding:10px;font-size:14px}
-details{margin-top:10px}
-summary{cursor:pointer;font-weight:600;font-size:14px;color:var(--ink2);padding:6px 0}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.hint{font-size:12px;color:var(--ink2);margin:4px 0 0}
-#status{margin-top:12px;font-size:14px;color:var(--ink2)}
-#status.err{color:var(--warn)}
-.best{margin-top:14px;display:flex;gap:8px}
-.best button{all:unset;box-sizing:border-box;cursor:pointer;flex:1;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px;text-align:center}
-.best button.win{border:2px solid var(--gold)}
-.best button.on{background:var(--soft)}
-.best b{display:block;font-size:20px}
-.best span{font-size:12px;color:var(--ink2)}
-.tabs{display:flex;gap:0;margin-top:14px;border-bottom:2px solid var(--line)}
-.tabs button{all:unset;box-sizing:border-box;flex:1;text-align:center;padding:12px 4px;font-weight:700;font-size:15px;color:var(--ink2);cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px}
-.tabs button[aria-selected="true"]{color:var(--go);border-bottom-color:var(--go)}
-.tabs button:focus-visible{outline:2px solid var(--go)}
-.tp{display:none;margin-top:12px}
+html,body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:16px;-webkit-text-size-adjust:100%;-webkit-font-smoothing:antialiased}
+body{padding-bottom:calc(28px + env(safe-area-inset-bottom));line-height:1.55}
+.wrap{max-width:760px;margin:0 auto;padding:0 16px}
+.hero{background:var(--hero);color:#F4EEE2;padding:calc(22px + env(safe-area-inset-top)) 0 64px;border-bottom:1px solid var(--gold)}
+.hero .wrap{display:flex;justify-content:space-between;align-items:flex-end;gap:12px}
+h1{font-family:var(--serif);font-weight:700;font-size:30px;letter-spacing:-.02em;margin:0;line-height:1.15}
+.hero p{margin:6px 0 0;color:#B9C4D3;font-size:14px;max-width:24em}
+.stamp{font-size:12px;color:var(--gold-l);text-align:right;line-height:1.4;white-space:nowrap;border:1px solid rgba(230,211,174,.4);border-radius:8px;padding:6px 10px}
+.stamp b{display:block;font-weight:600;color:#fff;font-size:13px;font-variant-numeric:tabular-nums}
+.form{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:20px 18px;margin-top:-44px;position:relative;box-shadow:0 18px 40px -18px rgba(11,27,46,.35)}
+label{display:block;font-size:13px;font-weight:600;color:var(--ink2);margin:0 0 6px}
+input,select{width:100%;font:inherit;font-size:17px;padding:13px 14px;min-height:50px;border:1px solid var(--line);border-radius:12px;background:var(--soft);color:var(--ink)}
+input::placeholder{color:#8B97A8}
+input:focus,select:focus{border-color:var(--gold);background:var(--card)}
+input:focus-visible,select:focus-visible,button:focus-visible,summary:focus-visible,a:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.fields{position:relative;padding-left:30px}
+.fld{position:relative}
+.fld+.fld,.swapwrap+.fld{margin-top:14px}
+.fld::before{content:"";position:absolute;left:-30px;top:41px;width:14px;height:14px;border-radius:50%;background:var(--card);border:3px solid var(--navy)}
+.fld.dest::before{background:var(--gold);border-color:var(--gold)}
+@media (prefers-color-scheme:dark){.fld::before{border-color:var(--gold-l)}.fld.dest::before{background:var(--gold)}}
+.fld.orig::after{content:"";position:absolute;left:-24px;top:58px;bottom:-46px;border-left:2px dotted var(--ink2);opacity:.6}
+.swapwrap{position:relative;height:0}
+.swap{position:absolute;right:0;top:-20px;z-index:2;width:42px;height:42px;border-radius:50%;border:1px solid var(--line);background:var(--card);color:var(--ink);font-size:18px;cursor:pointer}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.chip{font:inherit;font-size:13px;padding:6px 12px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--ink2);cursor:pointer}
+.chip:active{background:var(--soft)}
+.timebox{margin-top:18px}
+.row{display:flex;gap:8px;align-items:stretch}
+.row input{flex:1}
+.ghost{flex:0 0 auto;padding:0 18px;border-radius:12px;border:1px solid var(--gold);background:transparent;color:var(--ink);font:inherit;font-size:15px;font-weight:600;cursor:pointer}
+.btn{width:100%;margin-top:18px;min-height:56px;font:inherit;font-size:18px;font-weight:700;letter-spacing:.01em;border:0;border-radius:14px;background:var(--btn);color:var(--btn-t);cursor:pointer}
+.btn:active{opacity:.88}
+.btn[disabled]{opacity:.55}
+.btn.sm{margin-top:12px;min-height:46px;font-size:15px}
+details{margin-top:14px}
+summary{cursor:pointer;font-weight:600;font-size:14px;color:var(--ink2);padding:8px 0;min-height:44px;display:flex;align-items:center}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.hint{font-size:12.5px;color:var(--ink2);margin:6px 0 0}
+#status{margin-top:12px;font-size:14px;color:var(--ink2);min-height:1.2em}
+#status.err{color:var(--warn);font-weight:600}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:6px 16px 16px;margin-top:14px}
+.panel summary{padding-top:10px}
+
+.best{margin-top:22px;display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.best button{all:unset;box-sizing:border-box;cursor:pointer;position:relative;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 8px 12px;text-align:center;display:block}
+.best button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.best .m{display:block;font-size:13px;font-weight:600;color:var(--ink2)}
+.best b{display:block;font-family:var(--serif);font-size:25px;line-height:1.2;margin:4px 0 2px;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.best .f{display:block;font-size:13px;color:var(--ink2);font-variant-numeric:tabular-nums}
+.best button.on{background:var(--navy);border-color:var(--navy)}
+.best button.on .m,.best button.on .f{color:#C9D3E0}
+.best button.on b{color:#fff}
+@media (prefers-color-scheme:dark){.best button.on{background:#1B2E47;border-color:var(--gold)}}
+.badge{position:absolute;top:-10px;left:50%;transform:translateX(-50%);font-style:normal;font-size:11px;font-weight:700;background:var(--gold);color:#0B1B2E;padding:2px 10px;border-radius:999px;white-space:nowrap}
+#bestNote{margin:12px 2px 0;font-size:13.5px;color:var(--ink2)}
+#bestNote b{color:var(--ink)}
+
+.tp{display:none;margin-top:6px}
 .tp.on{display:block}
-.card{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-top:10px}
-.card h2{margin:0;padding:11px 14px;font-size:15px;display:flex;justify-content:space-between;align-items:baseline;border-bottom:2px dashed var(--line)}
-.card h2 small{font-weight:500;color:var(--ink2);font-size:12px}
-.tb{padding:12px 14px}
-.kv{display:flex;justify-content:space-between;gap:10px;padding:4px 0;font-size:15px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden;margin-top:14px}
+.card h2{margin:0;padding:14px 16px 10px;font-family:var(--serif);font-size:17px;font-weight:700;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.card h2 small{font-family:var(--sans);font-weight:500;color:var(--ink2);font-size:12px;text-align:right}
+.tb{padding:0 16px 16px}
+.kv{display:flex;justify-content:space-between;gap:12px;padding:8px 0;font-size:15.5px;border-top:1px solid var(--line)}
+.kv:first-child{border-top:0}
 .kv span:first-child{color:var(--ink2)}
-.kv b{font-variant-numeric:tabular-nums;text-align:right}
-.big{font-size:22px;font-weight:800;letter-spacing:-.02em}
-.legs{display:flex;flex-wrap:wrap;gap:4px;margin:8px 0}
-.leg{font-size:12px;font-weight:700;color:#fff;padding:3px 8px;border-radius:999px;background:#7a8797;white-space:nowrap}
-.leg.walk{background:transparent;color:var(--ink2);border:1px dashed var(--ink2);font-weight:500}
-.map{height:340px;border-radius:12px;border:1px solid var(--line);margin-top:10px;background:var(--soft)}
-.opts{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
-.opts button{padding:7px 12px;border-radius:999px;border:1px solid var(--line);background:var(--soft);color:var(--ink);font-size:13px;font-weight:600;cursor:pointer}
-.opts button.on{background:var(--go);color:#fff;border-color:var(--go)}
-.tl{list-style:none;margin:8px 0 0;padding:0}
-.tl li{position:relative;padding:0 0 12px 24px;font-size:14px}
-.tl li::before{content:"";position:absolute;left:5px;top:6px;bottom:-6px;width:3px;background:var(--c,#7a8797)}
+.kv b{font-variant-numeric:tabular-nums;text-align:right;font-weight:600}
+.kv b.big{font-family:var(--serif);font-size:28px;letter-spacing:-.02em;line-height:1.15;font-weight:700}
+.opts{display:flex;gap:8px;margin:0 0 12px;flex-wrap:wrap}
+.opts button{font:inherit;padding:9px 14px;min-height:40px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--ink);font-size:14px;font-weight:600;cursor:pointer}
+.opts button.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+@media (prefers-color-scheme:dark){.opts button.on{background:var(--gold);color:#0B1B2E;border-color:var(--gold)}}
+.tl{list-style:none;margin:14px 0 0;padding:0}
+.tl li{position:relative;padding:0 0 14px 28px;font-size:15px;line-height:1.45}
+.tl li::before{content:"";position:absolute;left:6px;top:8px;bottom:-8px;width:4px;border-radius:2px;background:var(--c,#7a8797)}
 .tl li:last-child::before{display:none}
-.tl li::after{content:"";position:absolute;left:0;top:5px;width:13px;height:13px;border-radius:50%;background:var(--card);border:3px solid var(--c,#7a8797)}
-.tl li.walk::before{background:none;border-left:3px dotted var(--ink2);width:0}
-.tl li.walk{color:var(--ink2);font-size:13px}
+.tl li::after{content:"";position:absolute;left:0;top:5px;width:16px;height:16px;border-radius:50%;background:var(--card);border:4px solid var(--c,#7a8797)}
+.tl li.walk::before{background:none;border-left:3px dotted var(--ink2);width:0;border-radius:0;left:8px}
+.tl li.walk{color:var(--ink2);font-size:13.5px;padding-bottom:10px}
 .tl li.walk::after{display:none}
 .tl b{font-weight:700}
-.tl .sub{display:block;color:var(--ink2);font-size:12px}
+.tl .sub{display:block;color:var(--ink2);font-size:13px;margin-top:1px}
+.map{height:360px;border-radius:14px;border:1px solid var(--line);margin-top:8px;background:var(--soft);z-index:0}
 .stn{display:flex;justify-content:space-between;gap:8px;font-size:14px;padding:3px 0}
-.arr{border-top:1px solid var(--line);padding:6px 0;font-size:14px;display:flex;justify-content:space-between;gap:8px}
-.arr i{font-style:normal;color:var(--ink2);font-size:12px}
-.note{font-size:12px;color:var(--ink2);margin-top:8px}
-.note.err{color:var(--warn)}
-.links{display:flex;gap:8px;margin-top:10px}
-.links a{flex:1;text-align:center;padding:10px;border-radius:10px;background:var(--soft);color:var(--ink);text-decoration:none;font-size:14px;font-weight:600;border:1px solid var(--line)}
-.hist button{all:unset;cursor:pointer;display:block;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px;width:100%}
-footer{margin:18px 0 0;font-size:12px;color:var(--ink2)}
-.pin{transform:translate(-50%,-50%);font-size:11px;background:#12263F;color:#fff;font-weight:700;font-size:12px;padding:3px 7px;border-radius:6px;white-space:nowrap;border:2px solid #fff}
-.pin.x{background:#fff;color:#12263F;border-color:#12263F}
+.arr{border-top:1px solid var(--line);padding:9px 0;font-size:15px;display:flex;justify-content:space-between;gap:8px;align-items:center}
+.arr i{font-style:normal;color:var(--ink2);font-size:12.5px}
+.note{font-size:12.5px;color:var(--ink2);margin-top:10px;line-height:1.5}
+.note.err{color:var(--warn);font-weight:600}
+.links{display:flex;gap:8px;margin-top:12px}
+.links a{flex:1;text-align:center;padding:12px 6px;min-height:46px;border-radius:12px;background:transparent;color:var(--ink);text-decoration:none;font-size:14px;font-weight:600;border:1px solid var(--line)}
+.hist button{all:unset;cursor:pointer;display:block;padding:12px 0;border-bottom:1px solid var(--line);font-size:15px;width:100%;box-sizing:border-box}
+.hist button:last-child{border-bottom:0}
+footer{margin:22px 0 0;font-size:12px;color:var(--ink2);line-height:1.6}
+footer b{color:var(--ink)}
+.pin{transform:translate(-50%,-50%);font-size:11px;background:#0B1B2E;color:#F4EEE2;font-weight:700;padding:3px 8px;border-radius:6px;white-space:nowrap;border:2px solid var(--gold-l)}
+.pin.x{background:#F4EEE2;color:#0B1B2E;border-color:#0B1B2E}
 .leaflet-div-icon{background:none;border:0}
+.leaflet-tile-pane{filter:grayscale(.55) contrast(1.04) brightness(1.02)}
+@media (prefers-color-scheme:dark){.leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) grayscale(.5) brightness(.85) contrast(.95)}}
+@media (max-width:380px){.best b{font-size:22px}h1{font-size:26px}.stamp{display:none}}
+@media (prefers-reduced-motion:no-preference){.best button,.chip,.btn,.ghost{transition:background .15s,color .15s,border-color .15s}}
 </style>
 </head>
 <body>
+<div class="hero"><div class="wrap">
+  <div><h1>가는길</h1><p>출발지와 도착지만 넣으면 대중교통·택시·자가용을 비교합니다.</p></div>
+  <div class="stamp">업데이트<b>09.29 12:40</b></div>
+</div></div>
 <div class="wrap">
-<header>
-  <h1>가는길 계산</h1>
-  <p>출발지·도착지·출발시간을 넣으면 대중교통, 택시, 자가용을 탭별로 비교하고 지도에 그려 줍니다.</p>
-</header>
-
-<section class="panel">
-  <label for="from">출발지 (주소 · 건물명)</label>
-  <input id="from" placeholder="예: 도곡동 타워팰리스" autocomplete="off">
-  <div class="chips" id="chipsFrom"></div>
-  <div class="row" style="margin-top:8px"><button class="swap" id="swap" aria-label="출발지와 도착지 바꾸기">⇅</button></div>
-  <label for="to">도착지 (주소 · 건물명)</label>
-  <input id="to" placeholder="예: 서울아산병원" autocomplete="off">
-  <div class="chips" id="chipsTo"></div>
-  <label for="when">출발시간</label>
-  <div class="row">
-    <input id="when" type="datetime-local">
-    <button class="swap" id="now" style="width:auto;padding:0 12px;font-size:14px">지금</button>
+<section class="form">
+  <div class="fields">
+    <div class="fld orig">
+      <label for="from">출발지</label>
+      <input id="from" placeholder="주소 또는 건물명 (예: 도곡동 타워팰리스)" autocomplete="off">
+      <div class="chips" id="chipsFrom"></div>
+    </div>
+    <div class="swapwrap"><button class="swap" id="swap" aria-label="출발지와 도착지 바꾸기">⇅</button></div>
+    <div class="fld dest">
+      <label for="to">도착지</label>
+      <input id="to" placeholder="주소 또는 건물명 (예: 서울아산병원)" autocomplete="off">
+      <div class="chips" id="chipsTo"></div>
+    </div>
   </div>
+  <div class="timebox">
+    <label for="when">출발시간</label>
+    <div class="row">
+      <input id="when" type="datetime-local">
+      <button class="ghost" id="now">지금</button>
+    </div>
+  </div>
+  <button class="btn" id="go">경로 계산</button>
+  <div id="status" role="status"></div>
   <details>
-    <summary>검색 설정 (카카오 키)</summary>
-    <label for="kakao">카카오 REST 키 (선택, 건물명 검색 정확도 향상)</label>
+    <summary>검색 정확도 설정 (카카오 키)</summary>
+    <label for="kakao">카카오 REST 키 (선택)</label>
     <input id="kakao" placeholder="developers.kakao.com REST API 키" autocomplete="off">
     <button class="btn sm" data-save>설정 저장</button>
   </details>
-  <button class="btn" id="go">경로 계산</button>
-  <div id="status" role="status"></div>
 </section>
 
 <div id="result" hidden>
-  <div class="best" id="best"></div>
-  <p class="hint" id="bestNote" style="margin-top:6px"></p>
-
-  <div class="tabs" role="tablist">
-    <button role="tab" id="tab-transit" aria-selected="true" data-tab="transit">대중교통</button>
-    <button role="tab" id="tab-taxi" aria-selected="false" data-tab="taxi">택시</button>
-    <button role="tab" id="tab-car" aria-selected="false" data-tab="car">자가용</button>
-  </div>
+  <div class="best" id="best" role="tablist" aria-label="이동 수단"></div>
+  <p id="bestNote"></p>
 
   <!-- 대중교통 -->
-  <div class="tp on" id="tp-transit" role="tabpanel" aria-labelledby="tab-transit">
+  <div class="tp on" id="tp-transit">
     <div class="card"><h2>도보 추계 <small id="walkSub"></small></h2><div class="tb" id="walkBox"></div></div>
     <div class="card"><h2>경로 · 환승 · 요금 <small id="trSub"></small></h2><div class="tb">
       <div class="opts" id="trOpts"></div>
@@ -168,7 +202,7 @@ footer{margin:18px 0 0;font-size:12px;color:var(--ink2)}
   </div>
 
   <!-- 택시 -->
-  <div class="tp" id="tp-taxi" role="tabpanel" aria-labelledby="tab-taxi">
+  <div class="tp" id="tp-taxi">
     <div class="card"><h2>택시 요금 <small>실시간 교통 미반영</small></h2><div class="tb" id="taxiBox"></div></div>
     <div class="card"><h2>지도</h2><div class="tb"><div class="map" id="map-taxi" style="margin-top:0"></div></div></div>
     <details class="panel">
@@ -184,7 +218,7 @@ footer{margin:18px 0 0;font-size:12px;color:var(--ink2)}
   </div>
 
   <!-- 자가용 -->
-  <div class="tp" id="tp-car" role="tabpanel" aria-labelledby="tab-car">
+  <div class="tp" id="tp-car">
     <div class="card"><h2>자가용 비용 <small>실시간 교통 미반영</small></h2><div class="tb" id="carBox"></div></div>
     <div class="card"><h2>지도</h2><div class="tb"><div class="map" id="map-car" style="margin-top:0"></div><div class="links" id="carLinks"></div></div></div>
     <details class="panel">
@@ -205,7 +239,7 @@ footer{margin:18px 0 0;font-size:12px;color:var(--ink2)}
   <div id="hist"></div>
 </section>
 
-<footer>역 위치·지도 © OpenStreetMap · 경로 © OSRM · 대중교통 © ODsay(키 사용 시) · 지하철 도착 © 서울 열린데이터광장. 표시 값은 추정이며 실제와 다를 수 있습니다.</footer>
+<footer><b>최종 업데이트 2026-09-29 12:40 (KST)</b><br>역 위치·지도 © OpenStreetMap · 경로 © OSRM · 대중교통 © ODsay(키 사용 시) · 지하철 도착 © 서울 열린데이터광장. 표시 값은 추정이며 실제와 다를 수 있습니다.</footer>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
@@ -449,16 +483,16 @@ function loadArrivals(){
 var S={};
 function showTab(t){
   ['transit','taxi','car'].forEach(function(k){
-    $('tp-'+k).classList.toggle('on',k===t);$('tab-'+k).setAttribute('aria-selected',k===t?'true':'false');
+    $('tp-'+k).classList.toggle('on',k===t);
   });
   S.tab=t;drawTab(t);
-  Array.prototype.forEach.call($('best').children,function(b){b.classList.toggle('on',b.dataset.tab===t)});
+  Array.prototype.forEach.call($('best').children,function(b){b.classList.toggle('on',b.dataset.tab===t);b.setAttribute('aria-selected',b.dataset.tab===t?'true':'false')});
 }
 function drawTab(t){
   if(!S.o)return;
   if(t==='transit')drawTransit(S.trIdx||0);
-  else if(t==='taxi'){drawSegs('map-taxi',{segs:[{pts:S.dr.geo,color:'#D4003B',dash:false}],marks:[]},S.o,S.d)}
-  else{drawSegs('map-car',{segs:[{pts:S.dr.geo,color:'#0F766E',dash:false}],marks:[]},S.o,S.d)}
+  else if(t==='taxi'){drawSegs('map-taxi',{segs:[{pts:S.dr.geo,color:'#B08A57',dash:false}],marks:[]},S.o,S.d)}
+  else{drawSegs('map-car',{segs:[{pts:S.dr.geo,color:'#0B1B2E',dash:false}],marks:[]},S.o,S.d)}
 }
 function drawTransit(i){
   S.trIdx=i;
@@ -497,12 +531,10 @@ function render(){
   var cand=[['transit',tMin],['taxi',durMin],['car',durMin]];
   var win=cand.slice().sort(function(a,b){return a[1]-b[1]})[0][0];
   var nm={transit:'대중교통',taxi:'택시',car:'자가용'};
-  $('best').innerHTML=
-    '<button data-tab="transit" class="'+(win==='transit'?'win':'')+'"><span>대중교통'+(real?'':' (추정)')+'</span><b>'+mm(tMin)+'</b><span>'+won(tFare)+'</span></button>'+
-    '<button data-tab="taxi" class="'+(win==='taxi'?'win':'')+'"><span>택시</span><b>'+mm(durMin)+'</b><span>'+won(tx.total+num('ttoll',0))+'</span></button>'+
-    '<button data-tab="car" class="'+(win==='car'?'win':'')+'"><span>자가용</span><b>'+mm(durMin)+'</b><span>'+won(car.total)+'</span></button>';
+  var card=function(k,label,min,fare){return '<button role="tab" data-tab="'+k+'">'+(win===k?'<em class="badge">최단시간</em>':'')+'<span class="m">'+label+'</span><b>'+mm(min)+'</b><span class="f">'+fare+'</span></button>'};
+  $('best').innerHTML=card('transit','대중교통'+(real?'':'(추정)'),tMin,won(tFare))+card('taxi','택시',durMin,won(tx.total+num('ttoll',0)))+card('car','자가용',durMin,won(car.total));
   Array.prototype.forEach.call($('best').children,function(b){b.onclick=function(){showTab(b.dataset.tab)}});
-  $('bestNote').innerHTML='최단시간: <b>'+nm[win]+'</b> · '+hhmm(dt)+' 출발 · 직선 '+km(hav(o,d))+' / 도로 '+km(dr.dist);
+  $('bestNote').innerHTML='<b>'+({transit:'대중교통이',taxi:'택시가',car:'자가용이'})[win]+'</b> 가장 빠릅니다 · '+hhmm(dt)+' 출발 · 도로 '+km(dr.dist)+' (직선 '+km(hav(o,d))+')';
 
   // 도보
   $('walkSub').textContent='직선×1.3, '+num('wspd',4.5)+'km/h';
@@ -551,7 +583,7 @@ function run(){
   var fq=$('from').value.trim(),tq=$('to').value.trim();
   if(!fq||!tq){status('출발지와 도착지를 모두 입력하세요.',true);return}
   var dt=$('when').value?new Date($('when').value):new Date();
-  $('go').disabled=true;status('위치를 찾는 중…');
+  $('go').disabled=true;$('go').textContent='계산 중…';status('위치를 찾는 중…');
   Promise.all([geocode(fq),geocode(tq)]).then(function(r){
     var o=r[0],d=r[1];status('도로 경로와 대중교통을 조회하는 중…');
     return Promise.all([driveRoute(o,d),odsay(o,d).catch(function(e){return {err:e.message==='Failed to fetch'?'ODsay 호출이 차단되었습니다. 키 발급 시 등록한 웹 URL이 이 주소와 같은지 확인하세요.':e.message}})]).then(function(x){
@@ -560,7 +592,7 @@ function run(){
       render();status('');saveHist(fq,tq);
     });
   }).catch(function(e){status(e.name==='AbortError'?'응답이 늦습니다. 잠시 후 다시 시도하세요.':e.message,true)})
-    .then(function(){$('go').disabled=false});
+    .then(function(){$('go').disabled=false;$('go').textContent='경로 계산'});
 }
 
 /* ---- 기록 · 설정 ---- */
@@ -583,7 +615,6 @@ var SET=['odsay','seoul','proxy','wspd','subfare','kakao','tbase','tbasem','tuni
 function loadSet(){SET.forEach(function(k){var v=LS.get('rt_'+k,null);if(v!==null)$(k).value=v})}
 Array.prototype.forEach.call(document.querySelectorAll('[data-save]'),function(b){b.onclick=function(){
   SET.forEach(function(k){LS.set('rt_'+k,$(k).value)});status('설정을 저장했습니다.');if(S.o)render()}});
-Array.prototype.forEach.call(document.querySelectorAll('.tabs button'),function(b){b.onclick=function(){showTab(b.dataset.tab)}});
 $('go').onclick=run;$('now').onclick=setNow;$('arrBtn').onclick=loadArrivals;
 $('swap').onclick=function(){var a=$('from').value;$('from').value=$('to').value;$('to').value=a};
 ['from','to'].forEach(function(id){$(id).addEventListener('keydown',function(e){if(e.key==='Enter')run()})});
