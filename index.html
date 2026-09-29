@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>가는길 계산 · 대중교통 택시 자가용 비교</title>
+<meta name="theme-color" content="#12263F">
+<style>
+:root{
+  --ink:#12263F; --ink2:#4A5B70; --paper:#F1F4F7; --card:#fff; --line:#D5DCE4;
+  --go:#0F766E; --go-d:#0B5A54; --gold:#F5A200; --warn:#B4361F; --soft:#E7EEF3;
+  color-scheme: light dark;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){--ink:#E8EEF5;--ink2:#9FB0C3;--paper:#0E1620;--card:#16212E;--line:#2A3A4C;--go:#2BB3A6;--go-d:#1F8F85;--soft:#1C2A3A;--warn:#FF8A73}
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--paper);color:var(--ink);font-family:-apple-system,"Apple SD Gothic Neo","Pretendard","Noto Sans KR","Malgun Gothic",sans-serif;-webkit-text-size-adjust:100%}
+body{padding:env(safe-area-inset-top) 0 calc(24px + env(safe-area-inset-bottom));line-height:1.5}
+.wrap{max-width:720px;margin:0 auto;padding:0 14px}
+header{padding:20px 0 10px}
+h1{font-size:24px;margin:0;letter-spacing:-.02em}
+header p{margin:4px 0 0;color:var(--ink2);font-size:14px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-top:12px}
+label{display:block;font-size:13px;font-weight:600;color:var(--ink2);margin:10px 0 4px}
+label:first-child{margin-top:0}
+input,select{width:100%;font:inherit;font-size:16px;padding:11px 12px;border:1px solid var(--line);border-radius:10px;background:var(--paper);color:var(--ink)}
+input:focus,select:focus,button:focus-visible,summary:focus-visible{outline:2px solid var(--go);outline-offset:1px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.chip{font-size:13px;padding:5px 10px;border-radius:999px;border:1px solid var(--line);background:var(--soft);color:var(--ink);cursor:pointer}
+.row{display:flex;gap:8px;align-items:end}
+.row>*{flex:1}
+.swap{flex:0 0 auto;width:44px;height:44px;border-radius:10px;border:1px solid var(--line);background:var(--soft);color:var(--ink);font-size:18px;cursor:pointer}
+.btn{width:100%;margin-top:14px;padding:14px;font-size:17px;font-weight:700;border:0;border-radius:12px;background:var(--go);color:#fff;cursor:pointer}
+.btn:active{background:var(--go-d)}
+.btn[disabled]{opacity:.6}
+details{margin-top:12px}
+summary{cursor:pointer;font-weight:600;font-size:14px;color:var(--ink2);padding:6px 0}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.hint{font-size:12px;color:var(--ink2);margin:4px 0 0}
+#status{margin-top:12px;font-size:14px;color:var(--ink2)}
+#status.err{color:var(--warn)}
+.best{margin-top:14px;display:flex;gap:8px}
+.best div{flex:1;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px;text-align:center}
+.best div.win{border:2px solid var(--gold)}
+.best b{display:block;font-size:20px}
+.best span{font-size:12px;color:var(--ink2)}
+.ticket{background:var(--card);border:1px solid var(--line);border-radius:14px;margin-top:12px;overflow:hidden}
+.ticket h2{margin:0;padding:12px 14px;font-size:16px;display:flex;justify-content:space-between;align-items:baseline;border-bottom:2px dashed var(--line)}
+.ticket h2 small{font-weight:500;color:var(--ink2);font-size:12px}
+.tb{padding:12px 14px}
+.kv{display:flex;justify-content:space-between;padding:4px 0;font-size:15px}
+.kv span:first-child{color:var(--ink2)}
+.kv b{font-variant-numeric:tabular-nums}
+.big{font-size:22px;font-weight:800;letter-spacing:-.02em}
+.legs{display:flex;flex-wrap:wrap;gap:4px;margin:8px 0}
+.leg{font-size:12px;font-weight:700;color:#fff;padding:3px 8px;border-radius:999px;background:#7a8797;white-space:nowrap}
+.leg.walk{background:transparent;color:var(--ink2);border:1px dashed var(--ink2);font-weight:500}
+.path{border:1px solid var(--line);border-radius:10px;padding:10px;margin-top:8px;background:var(--paper)}
+.stn{display:flex;justify-content:space-between;font-size:14px;padding:3px 0}
+.note{font-size:12px;color:var(--ink2);margin-top:8px}
+.links{display:flex;gap:8px;margin-top:10px}
+.links a{flex:1;text-align:center;padding:10px;border-radius:10px;background:var(--soft);color:var(--ink);text-decoration:none;font-size:14px;font-weight:600;border:1px solid var(--line)}
+.hist button{all:unset;cursor:pointer;display:block;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px;width:100%}
+footer{margin:18px 0 0;font-size:12px;color:var(--ink2)}
+@media (prefers-reduced-motion:no-preference){.ticket,.best{animation:in .25s ease-out}@keyframes in{from{opacity:0}to{opacity:1}}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>가는길 계산</h1>
+  <p>출발지·도착지·출발시간을 넣으면 걷는 거리, 대중교통 경로·환승·요금, 택시, 자가용을 한 번에 비교합니다.</p>
+</header>
+
+<section class="panel">
+  <label for="from">출발지 (주소 · 건물명)</label>
+  <input id="from" placeholder="예: 도곡동 타워팰리스" autocomplete="off">
+  <div class="chips" id="chipsFrom"></div>
+  <div class="row" style="margin-top:8px"><button class="swap" id="swap" aria-label="출발지와 도착지 바꾸기">⇅</button></div>
+  <label for="to">도착지 (주소 · 건물명)</label>
+  <input id="to" placeholder="예: 서울아산병원" autocomplete="off">
+  <div class="chips" id="chipsTo"></div>
+  <label for="when">출발시간</label>
+  <div class="row">
+    <input id="when" type="datetime-local">
+    <button class="swap" id="now" style="width:auto;padding:0 12px;font-size:14px">지금</button>
+  </div>
+  <button class="btn" id="go">경로 계산</button>
+  <div id="status" role="status"></div>
+</section>
+
+<div id="out"></div>
+
+<section class="panel hist" id="histBox" hidden>
+  <b style="font-size:14px">최근 검색</b>
+  <div id="hist"></div>
+</section>
+
+<details class="panel">
+  <summary>설정 · API 키 · 요금 기준</summary>
+  <label for="odsay">ODsay API 키 (대중교통 실경로·환승·요금용)</label>
+  <input id="odsay" placeholder="lab.odsay.com 에서 무료 발급" autocomplete="off">
+  <p class="hint">키를 넣으면 실제 노선·환승·요금이 나옵니다. 발급 시 웹 URL에 이 앱 주소(https://yjjn2005.github.io)를 등록하세요. 키는 이 기기 브라우저에만 저장됩니다.</p>
+  <label for="kakao">카카오 REST 키 (선택, 건물명 검색 정확도 향상)</label>
+  <input id="kakao" placeholder="developers.kakao.com REST API 키" autocomplete="off">
+  <div class="grid2">
+    <div><label for="kmpl">연비 (km/L)</label><input id="kmpl" inputmode="decimal" value="9"></div>
+    <div><label for="fuel">유가 (원/L)</label><input id="fuel" inputmode="numeric" value="1700"></div>
+    <div><label for="toll">통행료 (원)</label><input id="toll" inputmode="numeric" value="0"></div>
+    <div><label for="park">주차비 (원)</label><input id="park" inputmode="numeric" value="0"></div>
+    <div><label for="tbase">택시 기본요금 (원)</label><input id="tbase" inputmode="numeric" value="4800"></div>
+    <div><label for="subfare">지하철·버스 기본 (원)</label><input id="subfare" inputmode="numeric" value="1550"></div>
+  </div>
+  <p class="hint">요금은 서울 기준 기본값이며 인상되면 여기서 고칠 수 있습니다. 도로 소요시간은 무료 지도 엔진(실시간 교통 미반영)에 출발시간대 혼잡 계수를 곱한 추정입니다.</p>
+  <button class="btn" id="save" style="margin-top:10px">설정 저장</button>
+</details>
+
+<footer>지도 데이터 © OpenStreetMap · 경로 © OSRM · 대중교통 © ODsay(키 사용 시). 표시 값은 추정이며 실제와 다를 수 있습니다.</footer>
+</div>
+
+<script>
+(function(){
+'use strict';
+var $=function(id){return document.getElementById(id)};
+var LS={get:function(k,d){try{var v=localStorage.getItem(k);return v===null?d:v}catch(e){return d}},set:function(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+
+var PRESET_FROM=['도곡동 타워팰리스','남양주시 화도읍 월산리','서울역'];
+var PRESET_TO=['서울아산병원','삼성서울병원','인천공항 제1여객터미널'];
+var LINE_COLOR={'1호선':'#0052A4','2호선':'#00A84D','3호선':'#EF7C1C','4호선':'#00A5DE','5호선':'#996CAC','6호선':'#CD7C2F','7호선':'#747F00','8호선':'#E6186C','9호선':'#BDB092','분당':'#F5A200','신분당':'#D4003B','경의':'#77C4A3','중앙':'#77C4A3','공항':'#0090D2','경춘':'#0C8E72','우이':'#B0CE18','신림':'#6789CA','경강':'#003DA5','서해':'#81A914','GTX':'#9E1F62','수인':'#F5A200'};
+function lineColor(n){n=n||'';for(var k in LINE_COLOR){if(n.indexOf(k)>-1)return LINE_COLOR[k]}return '#5B6B7D'}
+function short(n){return (n||'').replace('수도권 ','').replace('서울 ','')}
+
+function pad(n){return n<10?'0'+n:''+n}
+function setNow(){var d=new Date();$('when').value=d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+'T'+pad(d.getHours())+':'+pad(d.getMinutes())}
+function won(n){return (Math.round(n/10)*10).toLocaleString('ko-KR')+'원'}
+function mm(m){m=Math.round(m);if(m<60)return m+'분';return Math.floor(m/60)+'시간 '+(m%60)+'분'}
+function km(m){return m<1000?Math.round(m)+'m':(m/1000).toFixed(1)+'km'}
+function hhmm(d){return pad(d.getHours())+':'+pad(d.getMinutes())}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function num(id,d){var v=parseFloat(String($(id).value).replace(/,/g,''));return isNaN(v)?d:v}
+
+function hav(a,b){var R=6371000,t=Math.PI/180,dl=(b.lat-a.lat)*t,dg=(b.lng-a.lng)*t;
+  var x=Math.sin(dl/2)*Math.sin(dl/2)+Math.cos(a.lat*t)*Math.cos(b.lat*t)*Math.sin(dg/2)*Math.sin(dg/2);
+  return 2*R*Math.asin(Math.sqrt(x))}
+
+function status(t,err){var s=$('status');s.textContent=t;s.className=err?'err':''}
+
+function fetchJson(url,opt,ms){
+  var c=new AbortController(),t=setTimeout(function(){c.abort()},ms||12000);
+  opt=opt||{};opt.signal=c.signal;
+  return fetch(url,opt).then(function(r){clearTimeout(t);if(!r.ok)throw new Error('HTTP '+r.status);return r.json()});
+}
+
+/* ---- 지오코딩 ---- */
+function geocode(q){
+  var m=q.match(/^\s*(-?\d{1,3}\.\d+)\s*,\s*(-?\d{1,3}\.\d+)\s*$/);
+  if(m)return Promise.resolve({lat:+m[1],lng:+m[2],name:q});
+  var kk=$('kakao').value.trim();
+  var nom=function(){
+    return fetchJson('https://nominatim.openstreetmap.org/search?format=jsonv2&countrycodes=kr&limit=1&accept-language=ko&q='+encodeURIComponent(q))
+      .then(function(a){if(!a.length)throw new Error('"'+q+'" 위치를 찾지 못했습니다. 도로명 주소나 건물명을 더 구체적으로 적어주세요.');
+        return {lat:+a[0].lat,lng:+a[0].lon,name:q}});
+  };
+  if(!kk)return nom();
+  var h={headers:{Authorization:'KakaoAK '+kk}};
+  return fetchJson('https://dapi.kakao.com/v2/local/search/keyword.json?size=1&query='+encodeURIComponent(q),h)
+    .then(function(r){if(r.documents&&r.documents.length){var d=r.documents[0];return {lat:+d.y,lng:+d.x,name:q}}
+      return fetchJson('https://dapi.kakao.com/v2/local/search/address.json?size=1&query='+encodeURIComponent(q),h).then(function(r2){
+        if(r2.documents&&r2.documents.length){var d=r2.documents[0];return {lat:+d.y,lng:+d.x,name:q}}return nom()})})
+    .catch(function(){return nom()});
+}
+
+/* ---- 주변 역 + 도보 추계 ---- */
+var WALK_DETOUR=1.3, WALK_MPM=75; // 우회계수 1.3, 분속 75m(=4.5km/h)
+function walkMin(m){return m*WALK_DETOUR/WALK_MPM}
+function nearStations(p){
+  var q='[out:json][timeout:12];(nwr["railway"="station"](around:1800,'+p.lat+','+p.lng+');nwr["station"="subway"](around:1800,'+p.lat+','+p.lng+'););out center 40;';
+  return fetchJson('https://overpass-api.de/api/interpreter',{method:'POST',body:'data='+encodeURIComponent(q),headers:{'Content-Type':'application/x-www-form-urlencoded'}},14000)
+    .then(function(r){
+      var seen={},arr=[];
+      (r.elements||[]).forEach(function(e){
+        var t=e.tags||{},nm=t['name:ko']||t.name;if(!nm)return;
+        var c=e.center||e;if(!c.lat)return;
+        var d=hav(p,{lat:c.lat,lng:c.lon});
+        if(seen[nm]&&seen[nm]<=d)return;seen[nm]=d;
+        arr=arr.filter(function(x){return x.name!==nm});
+        arr.push({name:nm,dist:d,lat:c.lat,lng:c.lon});
+      });
+      arr.sort(function(a,b){return a.dist-b.dist});
+      return arr.slice(0,3);
+    }).catch(function(){return []});
+}
+
+/* ---- 도로(택시·자가용) ---- */
+function driveRoute(o,d){
+  return fetchJson('https://router.project-osrm.org/route/v1/driving/'+o.lng+','+o.lat+';'+d.lng+','+d.lat+'?overview=false')
+    .then(function(r){if(!r.routes||!r.routes.length)throw new Error('도로 경로를 찾지 못했습니다.');
+      return {dist:r.routes[0].distance,dur:r.routes[0].duration}});
+}
+function trafficFactor(dt){
+  var h=dt.getHours()+dt.getMinutes()/60,wd=dt.getDay()>0&&dt.getDay()<6;
+  if(wd&&((h>=7&&h<9.5)||(h>=17&&h<20)))return 1.6;
+  if(wd&&h>=9.5&&h<17)return 1.25;
+  if(!wd&&h>=10&&h<20)return 1.2;
+  if(h>=23||h<5)return 0.85;
+  return 1.05;
+}
+function nightRate(dt){var h=dt.getHours();if(h>=23||h<2)return 1.4;if(h<4||h>=22)return 1.2;return 1}
+function taxiFare(distM,durSec,dt){
+  var base=num('tbase',4800),f=base;
+  if(distM>1600)f+=Math.ceil((distM-1600)/131)*100;
+  var free=distM/(15.33/3.6); // 시속 15.33km 이하 구간의 시간요금 근사
+  var slow=Math.max(0,durSec-free*0.85);
+  f+=Math.floor(slow/30)*100*0.35;
+  return Math.round(f*nightRate(dt)/100)*100;
+}
+function carCost(distM){
+  var fuel=distM/1000/num('kmpl',9)*num('fuel',1700);
+  return {fuel:fuel,toll:num('toll',0),park:num('park',0),total:fuel+num('toll',0)+num('park',0)};
+}
+
+/* ---- 대중교통 ---- */
+function odsay(o,d){
+  var key=$('odsay').value.trim();if(!key)return Promise.resolve(null);
+  var u='https://api.odsay.com/v1/api/searchPubTransPathT?SX='+o.lng+'&SY='+o.lat+'&EX='+d.lng+'&EY='+d.lat+'&OPT=0&SearchType=0&apiKey='+encodeURIComponent(key);
+  return fetchJson(u,{},15000).then(function(r){
+    if(r.error){throw new Error('ODsay: '+(r.error.msg||r.error.message||JSON.stringify(r.error)))}
+    var ps=(r.result&&r.result.path)||[];
+    ps.sort(function(a,b){return a.info.totalTime-b.info.totalTime});
+    return ps.slice(0,3);
+  });
+}
+function transitEstimate(o,d,so,sd){
+  var straight=hav(o,d),a=so[0],b=sd[0];
+  var wo=a?walkMin(a.dist):walkMin(straight*0.15),wd=b?walkMin(b.dist):walkMin(straight*0.15);
+  var ride=(a&&b?hav(a,b):straight)*1.3, rideMin=ride/1000/32*60;
+  var tr=Math.min(3,Math.floor(ride/12000));
+  var total=wo+4+rideMin+tr*5+wd;
+  var dk=ride/1000, fare=num('subfare',1550);
+  if(dk>10){fare+=Math.ceil(Math.min(dk,50)-10)/5*100; if(dk>50)fare+=Math.ceil((dk-50)/8)*100; fare=Math.round(fare/50)*50}
+  return {total:total,wo:wo,wd:wd,rideMin:rideMin,tr:tr,fare:fare,a:a,b:b};
+}
+
+function legHtml(sp){
+  var out=[];
+  sp.forEach(function(s){
+    if(s.trafficType===3){if(s.sectionTime>0)out.push('<span class="leg walk">도보 '+s.sectionTime+'분</span>')}
+    else if(s.trafficType===1){var ln=(s.lane&&s.lane[0]&&s.lane[0].name)||'지하철';out.push('<span class="leg" style="background:'+lineColor(ln)+'">'+esc(short(ln))+' '+s.sectionTime+'분</span>')}
+    else{var bn=(s.lane&&s.lane[0]&&(s.lane[0].busNo||s.lane[0].name))||'버스';out.push('<span class="leg" style="background:#2F6FDE">'+esc(bn)+'번 '+s.sectionTime+'분</span>')}
+  });return out.join('');
+}
+function stopsHtml(sp){
+  var h='';sp.forEach(function(s){
+    if(s.trafficType===3)return;
+    var ln=(s.lane&&s.lane[0]&&(s.lane[0].name||s.lane[0].busNo))||'';
+    h+='<div class="stn"><span>'+esc(s.startName||'')+' → '+esc(s.endName||'')+'</span><span>'+esc(short(ln))+' · '+s.stationCount+'정거장</span></div>';
+  });return h;
+}
+function transferCount(i){return Math.max(0,(i.busTransitCount||0)+(i.subwayTransitCount||0)-1)}
+
+/* ---- 링크 ---- */
+function links(o,d){
+  var k='https://map.kakao.com/link/by/publictransit/'+encodeURIComponent(o.name)+','+o.lat+','+o.lng+'/'+encodeURIComponent(d.name)+','+d.lat+','+d.lng;
+  var n='https://map.naver.com/p/directions/'+o.lng+','+o.lat+','+encodeURIComponent(o.name)+'/'+d.lng+','+d.lat+','+encodeURIComponent(d.name)+'/-/transit';
+  var t='https://map.kakao.com/link/by/car/'+encodeURIComponent(o.name)+','+o.lat+','+o.lng+'/'+encodeURIComponent(d.name)+','+d.lat+','+d.lng;
+  return '<div class="links"><a href="'+k+'" target="_blank" rel="noopener">카카오맵 실시간</a><a href="'+n+'" target="_blank" rel="noopener">네이버지도 실시간</a></div>'+
+         '<div class="links"><a href="'+t+'" target="_blank" rel="noopener">카카오맵 자동차 길찾기</a></div>';
+}
+
+/* ---- 실행 ---- */
+function run(){
+  var fq=$('from').value.trim(),tq=$('to').value.trim();
+  if(!fq||!tq){status('출발지와 도착지를 모두 입력하세요.',true);return}
+  var dt=$('when').value?new Date($('when').value):new Date();
+  $('go').disabled=true;$('out').innerHTML='';status('위치를 찾는 중…');
+  var o,d;
+  Promise.all([geocode(fq),geocode(tq)]).then(function(r){
+    o=r[0];d=r[1];status('주변 역과 도로 경로를 조회하는 중…');
+    return Promise.all([nearStations(o),nearStations(d),driveRoute(o,d),odsay(o,d).catch(function(e){return {err:e.message}})]);
+  }).then(function(r){
+    var so=r[0],sd=r[1],dr=r[2],ods=r[3];
+    var tf=trafficFactor(dt),dur=dr.dur*tf,durMin=dur/60;
+    var taxi=taxiFare(dr.dist,dur,dt),car=carCost(dr.dist);
+    var est=transitEstimate(o,d,so,sd);
+    var real=(ods&&!ods.err&&ods.length)?ods[0]:null;
+    var tMin=real?real.info.totalTime:est.total, tFare=real?real.info.payment:est.fare;
+    var cand=[['대중교통',tMin],['택시',durMin],['자가용',durMin]];
+    var win=cand.slice().sort(function(a,b){return a[1]-b[1]})[0][0];
+    var arrive=function(m){return hhmm(new Date(dt.getTime()+m*60000))};
+    var h='';
+    h+='<div class="best">'+
+      '<div class="'+(win==='대중교통'?'win':'')+'"><span>대중교통'+(real?'':' (추정)')+'</span><b>'+mm(tMin)+'</b><span>'+won(tFare)+'</span></div>'+
+      '<div class="'+(win==='택시'?'win':'')+'"><span>택시</span><b>'+mm(durMin)+'</b><span>'+won(taxi)+'</span></div>'+
+      '<div class="'+(win==='자가용'?'win':'')+'"><span>자가용</span><b>'+mm(durMin)+'</b><span>'+won(car.total)+'</span></div></div>';
+    h+='<p class="hint" style="margin-top:6px">최단시간: <b>'+win+'</b> · '+hhmm(dt)+' 출발 기준 · 직선 '+km(hav(o,d))+' / 도로 '+km(dr.dist)+'</p>';
+
+    // 도보 추계
+    var stHtml=function(label,arr,p){
+      if(!arr.length)return '<div class="kv"><span>'+label+'</span><b>주변 역 정보 없음</b></div>';
+      return arr.map(function(s,i){return '<div class="kv"><span>'+(i===0?label+' · ':'')+esc(s.name)+'</span><b>도보 '+Math.max(1,Math.round(walkMin(s.dist)))+'분 ('+km(s.dist*WALK_DETOUR)+')</b></div>'}).join('');
+    };
+    h+='<div class="ticket"><h2>도보 추계 <small>직선×1.3, 시속 4.5km</small></h2><div class="tb">'+
+      stHtml('출발지 주변',so,o)+'<div style="height:6px"></div>'+stHtml('도착지 주변',sd,d)+'</div></div>';
+
+    // 대중교통
+    h+='<div class="ticket"><h2>대중교통 <small>'+(real?'ODsay 실경로':'추정 (키 미설정)')+'</small></h2><div class="tb">';
+    if(real){
+      ods.forEach(function(p,i){
+        h+='<div class="path"><div class="kv"><span>'+(i===0?'최단':'대안 '+i)+'</span><b class="big">'+mm(p.info.totalTime)+'</b></div>'+
+          '<div class="kv"><span>요금</span><b>'+won(p.info.payment)+'</b></div>'+
+          '<div class="kv"><span>환승</span><b>'+transferCount(p.info)+'회</b></div>'+
+          '<div class="kv"><span>도착 예상</span><b>'+arrive(p.info.totalTime)+'</b></div>'+
+          '<div class="legs">'+legHtml(p.subPath)+'</div>'+stopsHtml(p.subPath)+'</div>';
+      });
+    }else{
+      if(ods&&ods.err)h+='<p class="note" style="color:var(--warn)">'+esc(ods.err)+'</p>';
+      h+='<div class="kv"><span>예상 소요</span><b class="big">'+mm(est.total)+'</b></div>'+
+        '<div class="kv"><span>예상 요금</span><b>'+won(est.fare)+'</b></div>'+
+        '<div class="kv"><span>예상 환승</span><b>'+est.tr+'회 안팎</b></div>'+
+        '<div class="kv"><span>도착 예상</span><b>'+arrive(est.total)+'</b></div>'+
+        '<div class="legs"><span class="leg walk">도보 '+Math.round(est.wo)+'분</span><span class="leg">탑승 약 '+Math.round(est.rideMin)+'분</span><span class="leg walk">도보 '+Math.round(est.wd)+'분</span></div>'+
+        '<p class="note">정확한 노선·환승·요금은 설정에 ODsay 키를 넣거나 아래 지도앱 버튼으로 확인하세요.</p>';
+    }
+    h+=links(o,d)+'</div></div>';
+
+    // 택시
+    h+='<div class="ticket"><h2>택시 <small>실시간 교통 미반영</small></h2><div class="tb">'+
+      '<div class="kv"><span>예상 요금</span><b class="big">'+won(taxi)+'</b></div>'+
+      '<div class="kv"><span>범위</span><b>'+won(taxi*0.9)+' ~ '+won(taxi*1.15)+'</b></div>'+
+      '<div class="kv"><span>소요</span><b>'+mm(durMin)+'</b></div>'+
+      '<div class="kv"><span>도착 예상</span><b>'+arrive(durMin)+'</b></div>'+
+      (nightRate(dt)>1?'<p class="note">심야 할증 '+Math.round((nightRate(dt)-1)*100)+'% 반영</p>':'')+
+      '<p class="note">거리 '+km(dr.dist)+' · 혼잡계수 ×'+tf.toFixed(2)+' · 통행료는 별도(택시비에 미포함)</p></div></div>';
+
+    // 자가용
+    h+='<div class="ticket"><h2>자가용</h2><div class="tb">'+
+      '<div class="kv"><span>총 비용</span><b class="big">'+won(car.total)+'</b></div>'+
+      '<div class="kv"><span>연료비</span><b>'+won(car.fuel)+'</b></div>'+
+      '<div class="kv"><span>통행료</span><b>'+won(car.toll)+'</b></div>'+
+      '<div class="kv"><span>주차비</span><b>'+won(car.park)+'</b></div>'+
+      '<div class="kv"><span>소요 / 도착</span><b>'+mm(durMin)+' / '+arrive(durMin)+'</b></div>'+
+      '<p class="note">병원 등 주차비와 통행료는 설정에서 입력하면 합산됩니다.</p></div></div>';
+
+    $('out').innerHTML=h;status('');
+    saveHist(fq,tq);
+  }).catch(function(e){status(e.name==='AbortError'?'응답이 늦습니다. 잠시 후 다시 시도하세요.':e.message,true)})
+    .then(function(){$('go').disabled=false});
+}
+
+/* ---- 기록 · 설정 ---- */
+function saveHist(f,t){
+  var a=[];try{a=JSON.parse(LS.get('rt_hist','[]'))}catch(e){}
+  a=a.filter(function(x){return !(x.f===f&&x.t===t)});a.unshift({f:f,t:t});a=a.slice(0,8);
+  LS.set('rt_hist',JSON.stringify(a));renderHist();
+}
+function renderHist(){
+  var a=[];try{a=JSON.parse(LS.get('rt_hist','[]'))}catch(e){}
+  $('histBox').hidden=!a.length;
+  $('hist').innerHTML=a.map(function(x,i){return '<button data-i="'+i+'">'+esc(x.f)+' → '+esc(x.t)+'</button>'}).join('');
+  Array.prototype.forEach.call($('hist').querySelectorAll('button'),function(b){b.onclick=function(){var x=a[+b.dataset.i];$('from').value=x.f;$('to').value=x.t;setNow();run()}});
+}
+function chips(id,arr,target){
+  $(id).innerHTML=arr.map(function(s){return '<button type="button" class="chip">'+esc(s)+'</button>'}).join('');
+  Array.prototype.forEach.call($(id).children,function(b){b.onclick=function(){$(target).value=b.textContent}});
+}
+var SET=['odsay','kakao','kmpl','fuel','toll','park','tbase','subfare'];
+function loadSet(){SET.forEach(function(k){var v=LS.get('rt_'+k,null);if(v!==null)$(k).value=v})}
+$('save').onclick=function(){SET.forEach(function(k){LS.set('rt_'+k,$(k).value)});status('설정을 저장했습니다.')};
+$('go').onclick=run;
+$('now').onclick=setNow;
+$('swap').onclick=function(){var a=$('from').value;$('from').value=$('to').value;$('to').value=a};
+['from','to'].forEach(function(id){$(id).addEventListener('keydown',function(e){if(e.key==='Enter')run()})});
+chips('chipsFrom',PRESET_FROM,'from');chips('chipsTo',PRESET_TO,'to');
+loadSet();setNow();renderHist();
+})();
+</script>
+</body>
+</html>
