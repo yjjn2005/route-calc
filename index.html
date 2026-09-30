@@ -124,6 +124,14 @@ footer b{color:var(--ink)}
 @media (prefers-color-scheme:dark){.tabbar button.on{background:#1B2E47;box-shadow:inset 0 0 0 1px var(--gold)}}
 .badge{position:absolute;top:-9px;right:8px;font-style:normal;font-size:11px;font-weight:700;background:var(--gold);color:#0B1B2E;padding:1px 8px;border-radius:999px}
 .pos{font:inherit;font-size:12.5px;font-weight:700;margin-top:4px;padding:5px 11px;min-height:32px;border-radius:999px;border:1px dashed var(--gold);background:transparent;color:var(--ink2);cursor:pointer}
+.sug{margin-top:8px;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--card)}
+.sug .hd{padding:7px 12px;font-size:12px;color:var(--ink2);background:var(--soft)}
+.sug button{all:unset;box-sizing:border-box;display:block;width:100%;padding:10px 12px;min-height:54px;border-top:1px solid var(--line);cursor:pointer}
+.sug button:active,.sug button:focus-visible{background:var(--soft)}
+.sug .s1{display:block;font-weight:700;font-size:15.5px}
+.sug .s2{display:block;font-size:12.5px;color:var(--ink2);margin-top:1px}
+.sug .none{padding:12px;font-size:13.5px;color:var(--ink2)}
+.picked{margin-top:6px;font-size:13px;color:var(--ok);font-weight:600}
 .arrt{color:var(--ink);font-variant-numeric:tabular-nums}
 .pos.set{border-style:solid;background:var(--gold);color:#0B1B2E}
 .lc{display:inline-block;color:#fff;font-weight:700;font-size:12.5px;padding:2px 9px;border-radius:999px;line-height:1.5;vertical-align:1px;white-space:nowrap}
@@ -133,20 +141,22 @@ footer b{color:var(--ink)}
 <body>
 <div class="hero"><div class="wrap">
   <div><h1>가는길</h1><p>출발지와 도착지만 넣으면 대중교통·택시·자가용을 비교합니다.</p></div>
-  <div class="stamp">업데이트<b>09.30 18:08</b></div>
+  <div class="stamp">업데이트<b>09.30 18:11</b></div>
 </div></div>
 <div class="wrap">
 <section class="form">
   <div class="fields">
     <div class="fld orig">
       <label for="from">출발지</label>
-      <input id="from" placeholder="주소 또는 건물명 (예: 도곡동 타워팰리스)" autocomplete="off">
+      <input id="from" placeholder="주소·건물·음식점 이름 (예: 도곡동 타워팰리스)" autocomplete="off">
+      <div class="picked" id="pk-from" hidden></div><div class="sug" id="sug-from" hidden></div>
       <div class="chips" id="chipsFrom"></div>
     </div>
     <div class="swapwrap"><button class="swap" id="swap" aria-label="출발지와 도착지 바꾸기">⇅</button></div>
     <div class="fld dest">
       <label for="to">도착지</label>
-      <input id="to" placeholder="주소 또는 건물명 (예: 서울아산병원)" autocomplete="off">
+      <input id="to" placeholder="주소·건물·음식점 이름 (예: 하동관 명동)" autocomplete="off">
+      <div class="picked" id="pk-to" hidden></div><div class="sug" id="sug-to" hidden></div>
       <div class="chips" id="chipsTo"></div>
     </div>
   </div>
@@ -243,7 +253,7 @@ footer b{color:var(--ink)}
   <div id="hist"></div>
 </section>
 
-<footer><b>최종 업데이트 2026-09-30 18:08 (KST)</b><br>노선·역 위치·지도 © OpenStreetMap contributors · 경로 © OSRM · 대중교통 © ODsay(키 사용 시) · 지하철 도착 © 서울 열린데이터광장(서울교통공사 등) · 고속도로 소통 © 한국도로공사. 표시 값은 추정이며 실제와 다를 수 있습니다.</footer>
+<footer><b>최종 업데이트 2026-09-30 18:11 (KST)</b><br>노선·역 위치·지도 © OpenStreetMap contributors · 경로 © OSRM · 대중교통 © ODsay(키 사용 시) · 지하철 도착 © 서울 열린데이터광장(서울교통공사 등) · 고속도로 소통 © 한국도로공사. 표시 값은 추정이며 실제와 다를 수 있습니다.</footer>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
@@ -591,6 +601,61 @@ function drawSegs(id,data,o,d){
   M.map.fitBounds(L.latLngBounds(all),{padding:[50,50]});
 }
 
+/* ---- 장소(음식점 등) 검색 자동완성 ---- */
+var PICK={},sugTimer={},sugSeq={};
+function catIcon(c){c=String(c||'');return /restaurant|food|fast_food|음식|식당|한식|양식|중식|일식|분식|국밥|냉면/.test(c)?'🍽':/cafe|카페|coffee/.test(c)?'☕':/bar|pub|술집/.test(c)?'🍶':/hospital|clinic|병원|의원/.test(c)?'🏥':/station|역/.test(c)?'🚇':/hotel|숙박|호텔/.test(c)?'🏨':'📍'}
+function nomList(q){
+  return fetchJson('https://nominatim.openstreetmap.org/search?format=jsonv2&countrycodes=kr&limit=8&accept-language=ko&addressdetails=1&viewbox=126.4,38.0,127.7,36.9&q='+encodeURIComponent(q),{},10000).then(function(a){
+    var seen={};
+    return a.map(function(x){var ad=x.address||{};
+      var addr=[ad.city||ad.county||ad.province,ad.borough||ad.city_district,ad.suburb||ad.quarter||ad.neighbourhood,ad.road,ad.house_number].filter(Boolean).join(' ');
+      return {name:x.name||String(x.display_name).split(',')[0],addr:addr||String(x.display_name).split(',').slice(1,4).join(',').trim(),cat:(x.category||'')+'/'+(x.type||''),lat:+x.lat,lng:+x.lon}})
+      .filter(function(x){var k=x.name+Math.round(x.lat*1000)+Math.round(x.lng*1000);if(seen[k])return false;seen[k]=1;return true});
+  });
+}
+function placeSearch(q){
+  return fetchJson(API+'/place?q='+encodeURIComponent(q),{},8000).then(function(r){if(r&&r.list)return {src:'카카오',list:r.list};throw new Error('no')})
+    .catch(function(){
+      return nomList(q).then(function(l){
+        if(l.length)return {src:'OSM',list:l};
+        var c=q.replace(/\s+/g,'');
+        if(c!==q)return new Promise(function(res){setTimeout(res,1100)}).then(function(){return nomList(c)}).then(function(l2){return {src:'OSM',list:l2}});
+        var f=fixTypos(q);if(f!==q)return new Promise(function(res){setTimeout(res,1100)}).then(function(){return nomList(f)}).then(function(l3){return {src:'OSM',list:l3}});
+        return {src:'OSM',list:[]};
+      });
+    });
+}
+function hideSug(id){var e=$('sug-'+id);e.hidden=true;e.innerHTML=''}
+function clearPick(id){PICK[id]=null;$('pk-'+id).hidden=true;$('pk-'+id).textContent=''}
+function showPick(id){var p=PICK[id];if(!p){$('pk-'+id).hidden=true;return}$('pk-'+id).hidden=false;$('pk-'+id).textContent='📍 '+(p.addr||'위치 선택됨')+' · 선택한 위치로 정확히 계산'}
+function runSug(id){
+  var q=$(id).value.trim(),my=(sugSeq[id]=(sugSeq[id]||0)+1),box=$('sug-'+id);
+  if(q.length<2||/^\s*-?\d{1,3}\.\d+\s*,/.test(q)){hideSug(id);return}
+  box.hidden=false;box.innerHTML='<div class="hd">장소 검색 중…</div>';
+  placeSearch(q).then(function(r){
+    if(my!==sugSeq[id])return;
+    var L=r.list.slice(0,8);
+    if(!L.length){box.innerHTML='<div class="none">검색된 장소가 없습니다. 주소를 그대로 입력하고 [경로 계산]을 누르시면 주소로 찾습니다.'+(r.src==='OSM'?'<br>음식점 검색이 더 정확해지려면 카카오 키가 필요합니다.':'')+'</div>';return}
+    box.innerHTML='<div class="hd">장소 검색 결과 ('+r.src+') · 눌러서 선택</div>'+L.map(function(x,i){return '<button data-i="'+i+'"><span class="s1">'+catIcon(x.cat)+' '+esc(x.name)+'</span><span class="s2">'+esc(x.addr||'')+'</span></button>'}).join('');
+    Array.prototype.forEach.call(box.querySelectorAll('button'),function(b){b.onclick=function(){
+      var x=L[+b.dataset.i];$(id).value=x.name;PICK[id]={label:x.name,lat:x.lat,lng:x.lng,addr:x.addr};hideSug(id);showPick(id)}});
+  }).catch(function(){if(my===sugSeq[id])box.innerHTML='<div class="none">장소 검색에 실패했습니다. 주소로 직접 입력해 보세요.</div>'});
+}
+function geocodeField(id){
+  var v=$(id).value.trim(),p=PICK[id];
+  if(p&&p.label===v)return Promise.resolve({lat:p.lat,lng:p.lng,name:v,picked:true});
+  return geocode(v);
+}
+['from','to'].forEach(function(id){
+  $(id).addEventListener('input',function(){
+    var p=PICK[id];if(p&&p.label!==$(id).value.trim())clearPick(id);
+    clearTimeout(sugTimer[id]);
+    if(PICK[id]){hideSug(id);return}
+    sugTimer[id]=setTimeout(function(){runSug(id)},850);
+  });
+});
+document.addEventListener('click',function(e){['from','to'].forEach(function(id){var f=$(id).parentNode;if(f&&!f.contains(e.target))hideSug(id)})});
+
 /* ---- 링크 ---- */
 function links(o,d){
   var k='https://map.kakao.com/link/by/publictransit/'+encodeURIComponent(o.name)+','+o.lat+','+o.lng+'/'+encodeURIComponent(d.name)+','+d.lat+','+d.lng;
@@ -800,11 +865,12 @@ function render(){
 
 /* ---- 실행 ---- */
 function run(){
+  hideSug('from');hideSug('to');
   var fq=$('from').value.trim(),tq=$('to').value.trim();
   if(!fq||!tq){status('출발지와 도착지를 모두 입력하세요.',true);return}
   var dt=$('when').value?new Date($('when').value):new Date();
   $('go').disabled=true;$('go').textContent='계산 중…';status('위치를 찾는 중…');
-  Promise.all([geocode(fq),geocode(tq)]).then(function(r){
+  Promise.all([geocodeField('from'),geocodeField('to')]).then(function(r){
     var o=r[0],d=r[1];status('도로 경로와 대중교통을 조회하는 중…');
     return Promise.all([driveRoute(o,d),exFetch(),odsay(o,d).catch(function(e){return {err:e.message==='Failed to fetch'?'ODsay 호출이 차단되었습니다. 키 발급 시 등록한 웹 URL이 이 주소와 같은지 확인하세요.':e.message}})]).then(function(x){
       var so=nearStations(o),sd=nearStations(d);
@@ -841,11 +907,11 @@ function renderHist(){
   var a=[];try{a=JSON.parse(LS.get('rt_hist','[]'))}catch(e){}
   $('histBox').hidden=!a.length;
   $('hist').innerHTML=a.map(function(x,i){return '<button data-i="'+i+'">'+esc(x.f)+' → '+esc(x.t)+'</button>'}).join('');
-  Array.prototype.forEach.call($('hist').querySelectorAll('button'),function(b){b.onclick=function(){var x=a[+b.dataset.i];$('from').value=x.f;$('to').value=x.t;setNow();run()}});
+  Array.prototype.forEach.call($('hist').querySelectorAll('button'),function(b){b.onclick=function(){var x=a[+b.dataset.i];$('from').value=x.f;$('to').value=x.t;clearPick('from');clearPick('to');hideSug('from');hideSug('to');setNow();run()}});
 }
 function chips(id,arr,target){
   $(id).innerHTML=arr.map(function(s){return '<button type="button" class="chip">'+esc(s)+'</button>'}).join('');
-  Array.prototype.forEach.call($(id).children,function(b){b.onclick=function(){$(target).value=b.textContent}});
+  Array.prototype.forEach.call($(id).children,function(b){b.onclick=function(){$(target).value=b.textContent;clearPick(target);hideSug(target)}});
 }
 var SET=['odsay','nearn','wspd','subfare','kakao','tbase','tbasem','tunit','ttoll','kmpl','fuel','toll','park'];
 function loadSet(){SET.forEach(function(k){var v=LS.get('rt_'+k,null);if(v!==null)$(k).value=v})}
@@ -859,7 +925,7 @@ $('trTl').addEventListener('click',function(e){
 });
 $('go').onclick=run;$('now').onclick=setNow;$('arrBtn').onclick=function(){arrCache={};loadArrivals();if(S.paths)fillArrivals(S.paths[S.trIdx||0])};
 setInterval(function(){if(!document.hidden&&S.paths&&S.tab==='transit'&&!$('result').hidden){Object.keys(arrCache).forEach(function(k){if(k.charAt(0)==='s')delete arrCache[k]});fillArrivals(S.paths[S.trIdx||0],true)}},30000);
-$('swap').onclick=function(){var a=$('from').value;$('from').value=$('to').value;$('to').value=a};
+$('swap').onclick=function(){var a=$('from').value;$('from').value=$('to').value;$('to').value=a;var pa=PICK.from;PICK.from=PICK.to;PICK.to=pa;showPick('from');showPick('to');hideSug('from');hideSug('to')};
 ['from','to'].forEach(function(id){$(id).addEventListener('keydown',function(e){if(e.key==='Enter')run()})});
 chips('chipsFrom',FAVS,'from');chips('chipsTo',FAVS,'to');
 loadSet();setNow();renderHist();
