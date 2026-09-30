@@ -47,7 +47,7 @@ input:focus-visible,select:focus-visible,button:focus-visible,summary:focus-visi
 .swapwrap{position:relative;height:0}
 .swap{position:absolute;right:0;top:-20px;z-index:2;width:42px;height:42px;border-radius:50%;border:1px solid var(--line);background:var(--card);color:var(--ink);font-size:18px;cursor:pointer}
 .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
-.chip{font:inherit;font-size:13px;padding:6px 12px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--ink2);cursor:pointer}
+.chip{font:inherit;font-size:13.5px;min-height:34px;padding:6px 13px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--ink2);cursor:pointer}
 .chip:active{background:var(--soft)}
 .timebox{margin-top:18px}
 .row{display:flex;gap:8px;align-items:stretch}
@@ -133,7 +133,7 @@ footer b{color:var(--ink)}
 <body>
 <div class="hero"><div class="wrap">
   <div><h1>가는길</h1><p>출발지와 도착지만 넣으면 대중교통·택시·자가용을 비교합니다.</p></div>
-  <div class="stamp">업데이트<b>09.30 18:07</b></div>
+  <div class="stamp">업데이트<b>09.30 18:08</b></div>
 </div></div>
 <div class="wrap">
 <section class="form">
@@ -243,7 +243,7 @@ footer b{color:var(--ink)}
   <div id="hist"></div>
 </section>
 
-<footer><b>최종 업데이트 2026-09-30 18:07 (KST)</b><br>노선·역 위치·지도 © OpenStreetMap contributors · 경로 © OSRM · 대중교통 © ODsay(키 사용 시) · 지하철 도착 © 서울 열린데이터광장(서울교통공사 등) · 고속도로 소통 © 한국도로공사. 표시 값은 추정이며 실제와 다를 수 있습니다.</footer>
+<footer><b>최종 업데이트 2026-09-30 18:08 (KST)</b><br>노선·역 위치·지도 © OpenStreetMap contributors · 경로 © OSRM · 대중교통 © ODsay(키 사용 시) · 지하철 도착 © 서울 열린데이터광장(서울교통공사 등) · 고속도로 소통 © 한국도로공사. 표시 값은 추정이며 실제와 다를 수 있습니다.</footer>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
@@ -253,8 +253,8 @@ footer b{color:var(--ink)}
 var $=function(id){return document.getElementById(id)};
 var LS={get:function(k,d){try{var v=localStorage.getItem(k);return v===null?d:v}catch(e){return d}},set:function(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
 
-var PRESET_FROM=['도곡동 타워팰리스','남양주시 화도읍 월산리','서울역'];
-var PRESET_TO=['서울아산병원','삼성서울병원','인천공항 제1여객터미널'];
+var FAVS=['래미안강남힐즈','도곡동 타워팰리스','월송유로베이커리','화도읍 월산리 553-2','약수하이츠아파트'];
+var FAVLL={'월송유로베이커리':{lat:37.8428,lng:127.5668,note:'안보리 마을 중심'}};
 var LINE_COLOR={'1호선':'#0052A4','2호선':'#00A84D','3호선':'#EF7C1C','4호선':'#00A5DE','5호선':'#996CAC','6호선':'#CD7C2F','7호선':'#747F00','8호선':'#E6186C','9호선':'#BDB092','분당':'#F5A200','신분당':'#D4003B','경의':'#77C4A3','중앙':'#77C4A3','공항':'#0090D2','경춘':'#0C8E72','우이':'#B0CE18','신림':'#6789CA','경강':'#003DA5','서해':'#81A914','GTX':'#9E1F62','수인':'#F5A200','김포':'#AD8B3A','용인':'#56AD2D','의정부':'#FDA600'};
 function lineColor(n){n=n||'';for(var k in LINE_COLOR){if(n.indexOf(k)>-1)return LINE_COLOR[k]}return '#5B6B7D'}
 function short(n){return (n||'').replace('수도권 ','').replace('서울 ','')}
@@ -318,6 +318,7 @@ function geoVariants(q){
   return out;
 }
 function geocode(q){
+  var fv=FAVLL[String(q).trim()];if(fv)return Promise.resolve({lat:fv.lat,lng:fv.lng,name:q,note:fv.note});
   var m=q.match(/^\s*(-?\d{1,3}\.\d+)\s*,\s*(-?\d{1,3}\.\d+)\s*$/);
   if(m)return Promise.resolve({lat:+m[1],lng:+m[2],name:q});
   var kk=$('kakao').value.trim(),cands=geoVariants(q);
@@ -744,7 +745,7 @@ function setArrStn(n){var c=S.arrStn!==n;S.arrStn=n||'';$('arrStn').textContent=
 
 function render(){
   var o=S.o,d=S.d,dt=S.dt,dr=S.dr,paths=S.paths;
-  var w=[o,d].filter(function(p){return p.approx||p.relaxed}).map(function(p){return p.approx?'<b>'+esc(p.name)+'</b>의 번지 위치는 지도 데이터에 없어 <b>'+esc(p.used)+'</b> 중심 좌표로 계산했습니다. 실제와 수백 m~수 km 차이가 날 수 있습니다.':'<b>'+esc(p.name)+'</b> 검색어로는 찾지 못해 <b>'+esc(p.used)+'</b>(으)로 다시 검색한 위치입니다. 지도 핀이 맞는지 확인하세요.'});
+  var w=[o,d].filter(function(p){return p.approx||p.relaxed||p.note}).map(function(p){return p.note?'<b>'+esc(p.name)+'</b>은(는) 저장된 대략 위치(<b>'+esc(p.note)+'</b>)로 계산했습니다. 정확한 위치는 지도앱에서 복사한 "위도,경도"를 입력해 주세요.':p.approx?'<b>'+esc(p.name)+'</b>의 번지 위치는 지도 데이터에 없어 <b>'+esc(p.used)+'</b> 중심 좌표로 계산했습니다. 실제와 수백 m~수 km 차이가 날 수 있습니다.':'<b>'+esc(p.name)+'</b> 검색어로는 찾지 못해 <b>'+esc(p.used)+'</b>(으)로 다시 검색한 위치입니다. 지도 핀이 맞는지 확인하세요.'});
   var anyA=[o,d].some(function(p){return p.approx});
   $('geoWarn').hidden=!w.length;$('geoWarn').innerHTML=w.join('<br>')+(anyA?'<br><span style="color:var(--ink2);font-size:12.5px">정확히 하려면 지도앱에서 위치를 길게 눌러 복사한 "위도,경도"를 입력하거나, 설정에 카카오 REST 키를 넣으세요.</span>':'');
   var real=paths&&paths.length,offline=real&&paths[0].info.offline;
@@ -860,7 +861,7 @@ $('go').onclick=run;$('now').onclick=setNow;$('arrBtn').onclick=function(){arrCa
 setInterval(function(){if(!document.hidden&&S.paths&&S.tab==='transit'&&!$('result').hidden){Object.keys(arrCache).forEach(function(k){if(k.charAt(0)==='s')delete arrCache[k]});fillArrivals(S.paths[S.trIdx||0],true)}},30000);
 $('swap').onclick=function(){var a=$('from').value;$('from').value=$('to').value;$('to').value=a};
 ['from','to'].forEach(function(id){$(id).addEventListener('keydown',function(e){if(e.key==='Enter')run()})});
-chips('chipsFrom',PRESET_FROM,'from');chips('chipsTo',PRESET_TO,'to');
+chips('chipsFrom',FAVS,'from');chips('chipsTo',FAVS,'to');
 loadSet();setNow();renderHist();
 })();
 </script>
