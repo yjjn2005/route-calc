@@ -133,7 +133,7 @@ footer b{color:var(--ink)}
 <body>
 <div class="hero"><div class="wrap">
   <div><h1>가는길</h1><p>출발지와 도착지만 넣으면 대중교통·택시·자가용을 비교합니다.</p></div>
-  <div class="stamp">업데이트<b>09.30 18:01</b></div>
+  <div class="stamp">업데이트<b>09.30 18:05</b></div>
 </div></div>
 <div class="wrap">
 <section class="form">
@@ -243,7 +243,7 @@ footer b{color:var(--ink)}
   <div id="hist"></div>
 </section>
 
-<footer><b>최종 업데이트 2026-09-30 18:01 (KST)</b><br>노선·역 위치·지도 © OpenStreetMap contributors · 경로 © OSRM · 대중교통 © ODsay(키 사용 시) · 지하철 도착 © 서울 열린데이터광장(서울교통공사 등) · 고속도로 소통 © 한국도로공사. 표시 값은 추정이며 실제와 다를 수 있습니다.</footer>
+<footer><b>최종 업데이트 2026-09-30 18:05 (KST)</b><br>노선·역 위치·지도 © OpenStreetMap contributors · 경로 © OSRM · 대중교통 © ODsay(키 사용 시) · 지하철 도착 © 서울 열린데이터광장(서울교통공사 등) · 고속도로 소통 © 한국도로공사. 표시 값은 추정이며 실제와 다를 수 있습니다.</footer>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
@@ -281,12 +281,28 @@ function fetchJson(url,opt,ms){
 }
 
 /* ---- 지오코딩 ---- */
+function fixTypos(q){
+  var t=String(q);
+  [[/필리스|펠리스|팰러스|펠러스|필러스|팔리스/g,'팰리스'],[/힐스$/,'힐즈'],[/래미안\s*강남\s*힐스/g,'래미안강남힐즈'],[/롯데\s*월드\s*타워/g,'롯데월드타워'],[/삼성\s*서울\s*병원/g,'삼성서울병원'],[/아산\s*병원/g,'아산병원']].forEach(function(r){t=t.replace(r[0],r[1])});
+  return t;
+}
+function vowelSwaps(q,max){
+  var V=[1,5,20],out=[],chars=Array.from(q);
+  for(var i=0;i<chars.length&&out.length<max;i++){
+    var c=chars[i].charCodeAt(0);if(c<0xAC00||c>0xD7A3)continue;
+    var code=c-0xAC00,jong=code%28,jung=Math.floor(code/28)%21,cho=Math.floor(code/588);
+    if(V.indexOf(jung)<0)continue;
+    V.forEach(function(v){if(v===jung||out.length>=max)return;var n=chars.slice();n[i]=String.fromCharCode(0xAC00+(cho*21+v)*28+jong);out.push(n.join(''))});
+  }
+  return out;
+}
 function geoVariants(q){
   var out=[],add=function(t,f){t=String(t||'').replace(/\s+/g,' ').trim();if(!t)return;
     if(!out.some(function(o){return o.q===t}))out.push({q:t,approx:!!(f&&f.approx),relaxed:!!(f&&f.relaxed)});
     if(/\s/.test(t)&&!/\d/.test(t)&&t.split(' ').length<=4){var c=t.replace(/\s+/g,'');if(!out.some(function(o){return o.q===c}))out.push({q:c,approx:!!(f&&f.approx),relaxed:true})}};
   add(q);
-  var g=q.replace(/\s*(아파트|APT|apt|단지|빌라|오피스텔|주상복합)\s*$/,'');
+  var base=fixTypos(q);if(base!==q)add(base,{relaxed:true});
+  var g=base.replace(/\s*(아파트|APT|apt|단지|빌라|오피스텔|주상복합)\s*$/,'');
   add(g,{relaxed:true});
   var lot=/\s*(산\s*)?\d+(-\d+)?\s*(번지|번)?\s*$/,x=g.replace(lot,'').trim(),hadLot=x!==g;
   if(hadLot)add(x,{approx:true});
@@ -297,6 +313,8 @@ function geoVariants(q){
   if(y!==x)add(y,{approx:hadLot,relaxed:!hadLot});
   var z=y.replace(/\s*(\S+(읍|면|동))\s+(\S+리)\s*$/,' $3').trim();
   if(z!==y)add(z,{approx:hadLot,relaxed:!hadLot});
+  if(!hadLot){var core=toks.length?toks.join(' '):x;vowelSwaps(core.replace(/\s+/g,' '),8).forEach(function(v){add(v,{relaxed:true})});
+    if(toks.length&&toks.join(' ')!==x&&/\s/.test(x)){}}
   return out;
 }
 function geocode(q){
@@ -305,7 +323,7 @@ function geocode(q){
   var kk=$('kakao').value.trim(),cands=geoVariants(q);
   var one=function(qq){
     var nom=function(){
-      return fetchJson('https://nominatim.openstreetmap.org/search?format=jsonv2&countrycodes=kr&limit=1&accept-language=ko&q='+encodeURIComponent(qq))
+      return fetchJson('https://nominatim.openstreetmap.org/search?format=jsonv2&countrycodes=kr&limit=1&accept-language=ko&viewbox=126.4,38.0,127.7,36.9&q='+encodeURIComponent(qq))
         .then(function(a){return a.length?{lat:+a[0].lat,lng:+a[0].lon}:null});
     };
     if(!kk)return nom();
