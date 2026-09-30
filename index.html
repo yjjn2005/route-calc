@@ -133,7 +133,7 @@ footer b{color:var(--ink)}
 <body>
 <div class="hero"><div class="wrap">
   <div><h1>가는길</h1><p>출발지와 도착지만 넣으면 대중교통·택시·자가용을 비교합니다.</p></div>
-  <div class="stamp">업데이트<b>09.30 18:05</b></div>
+  <div class="stamp">업데이트<b>09.30 18:07</b></div>
 </div></div>
 <div class="wrap">
 <section class="form">
@@ -243,7 +243,7 @@ footer b{color:var(--ink)}
   <div id="hist"></div>
 </section>
 
-<footer><b>최종 업데이트 2026-09-30 18:05 (KST)</b><br>노선·역 위치·지도 © OpenStreetMap contributors · 경로 © OSRM · 대중교통 © ODsay(키 사용 시) · 지하철 도착 © 서울 열린데이터광장(서울교통공사 등) · 고속도로 소통 © 한국도로공사. 표시 값은 추정이며 실제와 다를 수 있습니다.</footer>
+<footer><b>최종 업데이트 2026-09-30 18:07 (KST)</b><br>노선·역 위치·지도 © OpenStreetMap contributors · 경로 © OSRM · 대중교통 © ODsay(키 사용 시) · 지하철 도착 © 서울 열린데이터광장(서울교통공사 등) · 고속도로 소통 © 한국도로공사. 표시 값은 추정이며 실제와 다를 수 있습니다.</footer>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
@@ -467,7 +467,7 @@ function odsay(o,d){
   var key=$('odsay').value.trim();if(!key)return Promise.resolve(null);
   var u='https://api.odsay.com/v1/api/searchPubTransPathT?SX='+o.lng+'&SY='+o.lat+'&EX='+d.lng+'&EY='+d.lat+'&OPT=0&SearchType=0&apiKey='+encodeURIComponent(key);
   return fetchJson(u,{},15000).then(function(r){
-    if(r.error){var e=Array.isArray(r.error)?r.error[0]:r.error;throw new Error('ODsay: '+(e.msg||e.message||JSON.stringify(e)))}
+    if(r.error){var e=Array.isArray(r.error)?r.error[0]:r.error;if(String(e.code)==='429'||/quota/i.test(e.message||''))throw new Error('ODsay 오늘 호출 한도를 넘어 내장 노선망으로 계산했습니다. 내일 다시 실경로가 나옵니다.');throw new Error('ODsay: '+(e.msg||e.message||JSON.stringify(e)))}
     var ps=(r.result&&r.result.path)||[];
     ps.sort(function(a,b){return a.info.totalTime-b.info.totalTime});
     return ps.slice(0,3);
@@ -666,7 +666,7 @@ function busArr(sid){var key=$('odsay').value.trim();if(!key)return Promise.reje
   return cached('b:'+sid,function(){return fetchJson('https://api.odsay.com/v1/api/realtimeStation?stationID='+encodeURIComponent(sid)+'&apiKey='+encodeURIComponent(key),{},10000).then(function(r){
     if(r.error){var e=Array.isArray(r.error)?r.error[0]:r.error;throw new Error(e.msg||e.message||'버스 도착 조회 실패')}
     return (r.result&&r.result.real)||[]})})}
-function fillArrivals(p){
+function fillArrivals(p,skipBus){
   if(!p)return;
   var rides=p.subPath.filter(function(z){return z.trafficType!==3});
   rides.forEach(function(s,k){
@@ -683,6 +683,8 @@ function fillArrivals(p){
         el.innerHTML='🚇 '+(k>0?'<span style="color:var(--ink2);font-weight:400">현재 기준 </span>':'')+parts.join(' / ')+(dirOk?'':' <span style="color:var(--ink2);font-weight:400">(방향 미확인)</span>');
         el.style.color='var(--ink)';el.style.fontWeight='600';
       }).catch(function(e){setT('도착 정보를 가져오지 못했습니다: '+(e.message==='Failed to fetch'?'연결 실패':e.message),true)});
+    }else if(s.trafficType===2&&s.startID&&skipBus){
+      /* 자동 갱신에서는 버스 조회 생략(ODsay 일일 한도 보호) */
     }else if(s.trafficType===2&&s.startID){
       var bid=String((s.lane&&s.lane[0]&&s.lane[0].busID)||'');
       busArr(s.startID).then(function(real){
@@ -855,7 +857,7 @@ $('trTl').addEventListener('click',function(e){
   if(v===null)return;setPos(line,stn,v);drawTransit(S.trIdx||0);
 });
 $('go').onclick=run;$('now').onclick=setNow;$('arrBtn').onclick=function(){arrCache={};loadArrivals();if(S.paths)fillArrivals(S.paths[S.trIdx||0])};
-setInterval(function(){if(!document.hidden&&S.paths&&S.tab==='transit'&&!$('result').hidden){arrCache={};fillArrivals(S.paths[S.trIdx||0])}},30000);
+setInterval(function(){if(!document.hidden&&S.paths&&S.tab==='transit'&&!$('result').hidden){Object.keys(arrCache).forEach(function(k){if(k.charAt(0)==='s')delete arrCache[k]});fillArrivals(S.paths[S.trIdx||0],true)}},30000);
 $('swap').onclick=function(){var a=$('from').value;$('from').value=$('to').value;$('to').value=a};
 ['from','to'].forEach(function(id){$(id).addEventListener('keydown',function(e){if(e.key==='Enter')run()})});
 chips('chipsFrom',PRESET_FROM,'from');chips('chipsTo',PRESET_TO,'to');
