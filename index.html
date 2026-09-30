@@ -133,7 +133,7 @@ footer b{color:var(--ink)}
 <body>
 <div class="hero"><div class="wrap">
   <div><h1>가는길</h1><p>출발지와 도착지만 넣으면 대중교통·택시·자가용을 비교합니다.</p></div>
-  <div class="stamp">업데이트<b>09.30 17:58</b></div>
+  <div class="stamp">업데이트<b>09.30 18:01</b></div>
 </div></div>
 <div class="wrap">
 <section class="form">
@@ -243,7 +243,7 @@ footer b{color:var(--ink)}
   <div id="hist"></div>
 </section>
 
-<footer><b>최종 업데이트 2026-09-30 17:58 (KST)</b><br>노선·역 위치·지도 © OpenStreetMap contributors · 경로 © OSRM · 대중교통 © ODsay(키 사용 시) · 지하철 도착 © 서울 열린데이터광장(서울교통공사 등) · 고속도로 소통 © 한국도로공사. 표시 값은 추정이며 실제와 다를 수 있습니다.</footer>
+<footer><b>최종 업데이트 2026-09-30 18:01 (KST)</b><br>노선·역 위치·지도 © OpenStreetMap contributors · 경로 © OSRM · 대중교통 © ODsay(키 사용 시) · 지하철 도착 © 서울 열린데이터광장(서울교통공사 등) · 고속도로 소통 © 한국도로공사. 표시 값은 추정이며 실제와 다를 수 있습니다.</footer>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
@@ -282,7 +282,9 @@ function fetchJson(url,opt,ms){
 
 /* ---- 지오코딩 ---- */
 function geoVariants(q){
-  var out=[],add=function(t,f){t=String(t||'').replace(/\s+/g,' ').trim();if(t&&!out.some(function(o){return o.q===t}))out.push({q:t,approx:!!(f&&f.approx),relaxed:!!(f&&f.relaxed)})};
+  var out=[],add=function(t,f){t=String(t||'').replace(/\s+/g,' ').trim();if(!t)return;
+    if(!out.some(function(o){return o.q===t}))out.push({q:t,approx:!!(f&&f.approx),relaxed:!!(f&&f.relaxed)});
+    if(/\s/.test(t)&&!/\d/.test(t)&&t.split(' ').length<=4){var c=t.replace(/\s+/g,'');if(!out.some(function(o){return o.q===c}))out.push({q:c,approx:!!(f&&f.approx),relaxed:true})}};
   add(q);
   var g=q.replace(/\s*(아파트|APT|apt|단지|빌라|오피스텔|주상복합)\s*$/,'');
   add(g,{relaxed:true});
