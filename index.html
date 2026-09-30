@@ -130,7 +130,7 @@ footer b{color:var(--ink)}
 <body>
 <div class="hero"><div class="wrap">
   <div><h1>가는길</h1><p>출발지와 도착지만 넣으면 대중교통·택시·자가용을 비교합니다.</p></div>
-  <div class="stamp">업데이트<b>09.29 13:09</b></div>
+  <div class="stamp">업데이트<b>09.30 16:41</b></div>
 </div></div>
 <div class="wrap">
 <section class="form">
@@ -193,8 +193,6 @@ footer b{color:var(--ink)}
       <p class="hint">발급 시 웹 URL에 https://yjjn2005.github.io 를 등록하세요.</p>
       <label for="seoul">서울 열린데이터 인증키 (실시간 지하철 도착)</label>
       <input id="seoul" placeholder="data.seoul.go.kr 에서 발급" autocomplete="off">
-      <label for="proxy">프록시 주소 (브라우저 차단 시, 선택)</label>
-      <input id="proxy" placeholder="https://….workers.dev" autocomplete="off">
       <div class="grid2">
         <div><label for="wspd">도보 속도</label><select id="wspd"><option value="3.5">느리게 3.5km/h</option><option value="4.5" selected>보통 4.5km/h</option><option value="5.5">빠르게 5.5km/h</option></select></div>
         <div><label for="subfare">기본요금 (원)</label><input id="subfare" inputmode="numeric" value="1550"></div>
@@ -206,6 +204,7 @@ footer b{color:var(--ink)}
   <!-- 택시 -->
   <div class="tp" id="tp-taxi">
     <div class="card"><h2>택시 요금 <small>실시간 교통 미반영</small></h2><div class="tb" id="taxiBox"></div></div>
+    <div class="card"><h2>고속도로 실시간 소통 <small>한국도로공사</small></h2><div class="tb" id="exBox-taxi"></div></div>
     <div class="card"><h2>지도</h2><div class="tb"><div class="map" id="map-taxi" style="margin-top:0"></div></div></div>
     <details class="panel">
       <summary>택시 설정</summary>
@@ -222,6 +221,7 @@ footer b{color:var(--ink)}
   <!-- 자가용 -->
   <div class="tp" id="tp-car">
     <div class="card"><h2>자가용 비용 <small>실시간 교통 미반영</small></h2><div class="tb" id="carBox"></div></div>
+    <div class="card"><h2>고속도로 실시간 소통 <small>한국도로공사</small></h2><div class="tb" id="exBox-car"></div></div>
     <div class="card"><h2>지도</h2><div class="tb"><div class="map" id="map-car" style="margin-top:0"></div><div class="links" id="carLinks"></div></div></div>
     <details class="panel">
       <summary>자가용 설정</summary>
@@ -241,7 +241,7 @@ footer b{color:var(--ink)}
   <div id="hist"></div>
 </section>
 
-<footer><b>최종 업데이트 2026-09-29 13:09 (KST)</b><br>노선·역 위치·지도 © OpenStreetMap contributors · 경로 © OSRM · 대중교통 © ODsay(키 사용 시) · 지하철 도착 © 서울 열린데이터광장. 표시 값은 추정이며 실제와 다를 수 있습니다.</footer>
+<footer><b>최종 업데이트 2026-09-30 16:41 (KST)</b><br>노선·역 위치·지도 © OpenStreetMap contributors · 경로 © OSRM · 대중교통 © ODsay(키 사용 시) · 지하철 도착 © 서울 열린데이터광장 · 고속도로 소통 © 한국도로공사. 표시 값은 추정이며 실제와 다를 수 있습니다.</footer>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
@@ -402,10 +402,13 @@ function offlineRoutes(o,d,so,sd){
 
 /* ---- 도로 ---- */
 function driveRoute(o,d){
-  return fetchJson('https://router.project-osrm.org/route/v1/driving/'+o.lng+','+o.lat+';'+d.lng+','+d.lat+'?overview=full&geometries=geojson')
+  return fetchJson('https://router.project-osrm.org/route/v1/driving/'+o.lng+','+o.lat+';'+d.lng+','+d.lat+'?overview=full&geometries=geojson&steps=true')
     .then(function(r){if(!r.routes||!r.routes.length)throw new Error('도로 경로를 찾지 못했습니다.');
       var g=r.routes[0].geometry.coordinates.map(function(c){return [c[1],c[0]]});
-      return {dist:r.routes[0].distance,dur:r.routes[0].duration,geo:g}});
+      var hw={};
+      ((r.routes[0].legs||[]).forEach(function(l){(l.steps||[]).forEach(function(st){if(st.name&&/고속도로|고속국도/.test(st.name))hw[st.name]=(hw[st.name]||0)+st.distance})}));
+      var hwl=Object.keys(hw).map(function(k){return {name:k,dist:hw[k]}}).filter(function(x){return x.dist>=1500}).sort(function(x,y){return y.dist-x.dist});
+      return {dist:r.routes[0].distance,dur:r.routes[0].duration,geo:g,hw:hwl}});
 }
 function trafficFactor(dt){
   var h=dt.getHours()+dt.getMinutes()/60,wd=dt.getDay()>0&&dt.getDay()<6;
@@ -549,16 +552,15 @@ function carLinks(o,d){
 }
 
 /* ---- 실시간 지하철 도착 (서울 열린데이터) ---- */
+var API='https://route-calc-api.yjjn2005.workers.dev';
 function arrUrl(stn){
   var key=$('seoul').value.trim();if(!key)return null;
-  var u='https://swopenapi.seoul.go.kr/api/subway/'+encodeURIComponent(key)+'/json/realtimeStationArrival/0/12/'+encodeURIComponent(stn.replace(/역$/,''));
-  var px=$('proxy').value.trim();
-  return px?px.replace(/\/$/,'')+'/?u='+encodeURIComponent(u):u;
+  return API+'/subway/arrival?station='+encodeURIComponent(stn.replace(/역$/,''))+'&key='+encodeURIComponent(key);
 }
 function loadArrivals(){
   var stn=S.arrStn;if(!stn){$('arrNote').textContent='조회할 역이 없습니다. 먼저 경로를 계산하세요.';return}
   var u=arrUrl(stn);
-  if(!u){$('arrList').innerHTML='';$('arrNote').className='note';$('arrNote').textContent='설정에 서울 열린데이터 인증키를 넣으면 실시간 도착정보가 나옵니다.';return}
+  if(!u){$('arrList').innerHTML='';$('arrNote').className='note';$('arrNote').textContent='설정에 서울 열린데이터 인증키를 넣고 저장하면 실시간 도착정보가 나옵니다.';return}
   $('arrNote').className='note';$('arrNote').textContent='조회 중…';
   fetchJson(u,{},10000).then(function(r){
     if(r.errorMessage&&r.errorMessage.code&&r.errorMessage.code!=='INFO-000')throw new Error(r.errorMessage.message||r.errorMessage.code);
@@ -571,8 +573,36 @@ function loadArrivals(){
     $('arrNote').textContent=(a[0].recptnDt||'')+' 기준'
   }).catch(function(e){
     $('arrList').innerHTML='';$('arrNote').className='note err';
-    $('arrNote').textContent=(e.name==='AbortError'?'응답 지연':e.message==='Failed to fetch'?'브라우저가 요청을 막았습니다(CORS). 설정에 프록시 주소를 넣어야 합니다.':e.message);
+    $('arrNote').textContent=(e.name==='AbortError'?'응답 지연':e.message==='Failed to fetch'?'서버에 연결하지 못했습니다. 잠시 후 다시 시도하세요.':e.message);
   });
+}
+
+/* ---- 한국도로공사 고속도로 실시간 소통 (Worker 경유) ---- */
+function exFetch(){
+  return fetchJson(API+'/ex?path=odtraffic/trafficAmountByCongest&numOfRows=500&pageNo=1',{},15000)
+    .then(function(r){if(!r||!r.list)throw new Error((r&&r.message)||'응답 형식 오류');return {list:r.list}})
+    .catch(function(e){return {err:e.name==='AbortError'?'응답 지연':e.message}});
+}
+function hwStem(n){return String(n).replace(/\(.*?\)/g,'').replace(/고속국도|고속도로|고속화도로|선$/g,'').replace(/\s/g,'')}
+function exCardHtml(){
+  var ex=S.ex,hw=S.dr.hw||[];
+  if(!ex)return '<p class="note">조회 전입니다.</p>';
+  if(ex.err)return '<p class="note err">한국도로공사 정보를 가져오지 못했습니다: '+esc(ex.err)+'</p>';
+  var seenK={},L=ex.list.filter(function(x){var k=x.routeName+x.updownTypeCode+x.conzoneName;if(seenK[k]!==undefined){if(+x.speed<+seenK[k].speed){seenK[k].speed=x.speed;seenK[k].timeAvg=x.timeAvg}return false}seenK[k]=x;return true}),t=L.length?L[0]:null,base=t?t.stdHour.slice(0,2)+':'+t.stdHour.slice(2,4):'';
+  var dirn=function(c){return c==='S'?'상행':c==='E'?'하행':''};
+  var row=function(x){return '<div class="kv"><span>'+esc(x.routeName)+' '+dirn(x.updownTypeCode)+'<br><span style="font-size:13px">'+esc(x.conzoneName)+'</span></span><b style="color:'+(x.grade==='3'?'var(--warn)':'var(--ink)')+'">'+x.speed+'km/h<br><span style="font-size:12.5px;font-weight:500;color:var(--ink2)">통과 '+Math.max(1,Math.round(x.timeAvg/60))+'분</span></b></div>'};
+  var h='';
+  if(!hw.length){h+='<p class="note" style="margin-top:0">이 경로에는 고속도로 구간이 없습니다.</p>'}
+  else{
+    h+='<div class="kv"><span>이용 고속도로</span><b>'+hw.map(function(x){return esc(x.name)+' '+km(x.dist)}).join('<br>')+'</b></div>';
+    var stems=hw.map(function(x){return hwStem(x.name)});
+    var hit=L.filter(function(x){var st=hwStem(x.routeName);return stems.some(function(z){return z&&st&&(z===st||z.indexOf(st)>-1||st.indexOf(z)>-1)})});
+    h+=hit.length?'<p class="note" style="margin:8px 0 0"><b>경로 고속도로의 정체·서행 구간 '+hit.length+'곳</b> (상행·하행 모두 표시)</p>'+hit.slice(0,10).map(row).join(''):'<div class="kv"><span>정체·서행 구간</span><b style="color:var(--ok)">없음</b></div>';
+  }
+  var top=L.slice().sort(function(a,b){return a.speed-b.speed}).slice(0,10);
+  h+='<details><summary>전국 고속도로 정체 구간 '+L.length+'곳 보기</summary>'+top.map(row).join('')+(L.length>10?'<p class="note">느린 순 상위 10곳만 표시합니다.</p>':'')+'</details>';
+  h+='<p class="note">한국도로공사 실시간 정보'+(base?' · '+base+' 기준':'')+'. 위 소요시간에는 아직 반영되지 않습니다.</p>';
+  return h;
 }
 
 /* ---- 상태 · 렌더 ---- */
@@ -664,6 +694,7 @@ function render(){
     '<div class="kv"><span>소요 · 도착</span><b>'+mm(durMin)+' · '+hhmm(new Date(dt.getTime()+dur*1000))+'</b></div>'+
     '<p class="note">거리 '+km(dr.dist)+' · 혼잡계수 ×'+tf.toFixed(2)+'</p>';
   $('carLinks').innerHTML=carLinks(o,d);
+  var exh=exCardHtml();$('exBox-taxi').innerHTML=exh;$('exBox-car').innerHTML=exh;
 
   $('result').hidden=false;
   S.trIdx=0;showTab(S.tab||'transit');
@@ -678,10 +709,10 @@ function run(){
   $('go').disabled=true;$('go').textContent='계산 중…';status('위치를 찾는 중…');
   Promise.all([geocode(fq),geocode(tq)]).then(function(r){
     var o=r[0],d=r[1];status('도로 경로와 대중교통을 조회하는 중…');
-    return Promise.all([driveRoute(o,d),odsay(o,d).catch(function(e){return {err:e.message==='Failed to fetch'?'ODsay 호출이 차단되었습니다. 키 발급 시 등록한 웹 URL이 이 주소와 같은지 확인하세요.':e.message}})]).then(function(x){
+    return Promise.all([driveRoute(o,d),exFetch(),odsay(o,d).catch(function(e){return {err:e.message==='Failed to fetch'?'ODsay 호출이 차단되었습니다. 키 발급 시 등록한 웹 URL이 이 주소와 같은지 확인하세요.':e.message}})]).then(function(x){
       var so=nearStations(o),sd=nearStations(d);
-      var real=x[1]&&!x[1].err&&x[1].length,off=real?null:offlineRoutes(o,d,so,sd);
-      S={o:o,d:d,dt:dt,dr:x[0],ods:x[1],paths:real?x[1]:off,so:so,sd:sd,est:transitEstimate(o,d,so,sd),tab:S.tab};
+      var od=x[2],real=od&&!od.err&&od.length,off=real?null:offlineRoutes(o,d,so,sd);
+      S={o:o,d:d,dt:dt,dr:x[0],ex:x[1],ods:od,paths:real?od:off,so:so,sd:sd,est:transitEstimate(o,d,so,sd),tab:S.tab};
       render();status('');saveHist(fq,tq);
     });
   }).catch(function(e){status(e.name==='AbortError'?'응답이 늦습니다. 잠시 후 다시 시도하세요.':e.message,true)})
@@ -704,7 +735,7 @@ function chips(id,arr,target){
   $(id).innerHTML=arr.map(function(s){return '<button type="button" class="chip">'+esc(s)+'</button>'}).join('');
   Array.prototype.forEach.call($(id).children,function(b){b.onclick=function(){$(target).value=b.textContent}});
 }
-var SET=['odsay','seoul','proxy','wspd','subfare','kakao','tbase','tbasem','tunit','ttoll','kmpl','fuel','toll','park'];
+var SET=['odsay','seoul','wspd','subfare','kakao','tbase','tbasem','tunit','ttoll','kmpl','fuel','toll','park'];
 function loadSet(){SET.forEach(function(k){var v=LS.get('rt_'+k,null);if(v!==null)$(k).value=v})}
 Array.prototype.forEach.call(document.querySelectorAll('[data-save]'),function(b){b.onclick=function(){
   SET.forEach(function(k){LS.set('rt_'+k,$(k).value)});status('설정을 저장했습니다.');if(S.o)render()}});
