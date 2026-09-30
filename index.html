@@ -141,7 +141,7 @@ footer b{color:var(--ink)}
 <body>
 <div class="hero"><div class="wrap">
   <div><h1>가는길</h1><p>출발지와 도착지만 넣으면 대중교통·택시·자가용을 비교합니다.</p></div>
-  <div class="stamp">업데이트<b>09.30 18:28</b></div>
+  <div class="stamp">업데이트<b>09.30 19:52</b></div>
 </div></div>
 <div class="wrap">
 <section class="form">
@@ -253,7 +253,7 @@ footer b{color:var(--ink)}
   <div id="hist"></div>
 </section>
 
-<footer><b>최종 업데이트 2026-09-30 18:28 (KST)</b><br>노선·역 위치·지도 © OpenStreetMap contributors · 경로 © OSRM · 대중교통 © ODsay(키 사용 시) · 지하철 도착 © 서울 열린데이터광장(서울교통공사 등) · 고속도로 소통 © 한국도로공사. 표시 값은 추정이며 실제와 다를 수 있습니다.</footer>
+<footer><b>최종 업데이트 2026-09-30 19:52 (KST)</b><br>노선·역 위치·지도 © OpenStreetMap contributors · 경로 © OSRM · 대중교통 © ODsay(키 사용 시) · 지하철 도착 © 서울 열린데이터광장(서울교통공사 등) · 고속도로 소통 © 한국도로공사. 표시 값은 추정이며 실제와 다를 수 있습니다.</footer>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
@@ -264,7 +264,7 @@ var $=function(id){return document.getElementById(id)};
 var LS={get:function(k,d){try{var v=localStorage.getItem(k);return v===null?d:v}catch(e){return d}},set:function(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
 
 var FAVS=['래미안강남힐즈','도곡동 타워팰리스','월송유로베이커리','서면 안보리 782-2','화도읍 경춘로 지현3길 66','화도읍 월산리 553-2','약수하이츠아파트'];
-var FAVLL={'월송유로베이커리':{lat:37.8428,lng:127.5668,note:'안보리 마을 중심'}};
+var FAVLL={};
 var LINE_COLOR={'1호선':'#0052A4','2호선':'#00A84D','3호선':'#EF7C1C','4호선':'#00A5DE','5호선':'#996CAC','6호선':'#CD7C2F','7호선':'#747F00','8호선':'#E6186C','9호선':'#BDB092','분당':'#F5A200','신분당':'#D4003B','경의':'#77C4A3','중앙':'#77C4A3','공항':'#0090D2','경춘':'#0C8E72','우이':'#B0CE18','신림':'#6789CA','경강':'#003DA5','서해':'#81A914','GTX':'#9E1F62','수인':'#F5A200','김포':'#AD8B3A','용인':'#56AD2D','의정부':'#FDA600'};
 function lineColor(n){n=n||'';for(var k in LINE_COLOR){if(n.indexOf(k)>-1)return LINE_COLOR[k]}return '#5B6B7D'}
 function short(n){return (n||'').replace('수도권 ','').replace('서울 ','')}
@@ -335,7 +335,7 @@ var REGION_HINT=[['화도읍','경기도 남양주시 ',''],['안보리','강원
 function regionQueries(q){
   var out=[q];
   if(/\d/.test(q)&&(!/(특별시|광역시|특별자치|도|시|군|구)\s/.test(q)||/^서면/.test(q))){
-    for(var i=0;i<REGION_HINT.length;i++){var r=REGION_HINT[i];if(q.indexOf(r[0])>-1){var need=r[2]&&q.indexOf(r[2])<0?r[2]+' ':'';out.push(r[1]+need+q);break}}
+    for(var i=0;i<REGION_HINT.length;i++){var r=REGION_HINT[i];if(q.indexOf(r[0])>-1){var need=r[2]&&q.indexOf(r[2])<0?r[2]+' ':'';out.unshift(r[1]+need+q);break}}
   }
   return out;
 }
