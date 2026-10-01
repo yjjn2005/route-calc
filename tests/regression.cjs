@@ -56,6 +56,8 @@ function test(name,fn){fn();count++;console.log('PASS '+name)}
  test('대중교통 경로 없을 때 가상 요금·노선을 추천에서 제외',()=>{assert.match(node('reco').innerHTML,/요금 미확인/);assert.match(node('trSummary').innerHTML,/확인하지 못했습니다/);assert.doesNotMatch(node('trTl').innerHTML,/탑승/)});
  storage.rt_hist='[]';a.saveHist('같은 이름','도착지',{lat:37.5,lng:127},{lat:37.6,lng:127.1},2);a.saveHist('같은 이름','도착지',{lat:37.51,lng:127},{lat:37.6,lng:127.1},2);
  test('동명이 장소의 서로 다른 좌표를 검색 기록에 보존',()=>{assert.equal(a.readHist().length,2);assert.equal(a.readHist()[1].from.lat,37.5);assert.equal(a.readHist()[0].people,2)});
+ storage.rt_hist=JSON.stringify([{f:'같은 이름',t:'도착지'},...a.readHist()]);a.saveHist('같은 이름','도착지',{lat:37.51,lng:127},{lat:37.6,lng:127.1},2);
+ test('같은 경로의 좌표 없는 이전 기록 중복 제거',()=>assert.equal(a.readHist().length,2));
  a.setPick('from',{label:'선택한 지점',lat:37.5,lng:127});let selected=await a.geocodeField('from','선택한 지점',{label:'선택한 지점',lat:37.5,lng:127});
  test('선택한 장소 좌표로 재계산',()=>assert.equal(selected.lat,37.5));
  node('from').value='37.5547,126.9706';node('to').value='37.4979,127.0276';node('people').value='2';let job=a.run();
