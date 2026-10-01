@@ -124,6 +124,21 @@ footer b{color:var(--ink)}
 @media (prefers-color-scheme:dark){.tabbar button.on{background:#1B2E47;box-shadow:inset 0 0 0 1px var(--gold)}}
 .badge{position:absolute;top:-9px;right:8px;font-style:normal;font-size:11px;font-weight:700;background:var(--gold);color:#0B1B2E;padding:1px 8px;border-radius:999px}
 .pos{font:inherit;font-size:12.5px;font-weight:700;margin-top:4px;padding:5px 11px;min-height:32px;border-radius:999px;border:1px dashed var(--gold);background:transparent;color:var(--ink2);cursor:pointer}
+.formsum{display:none;align-items:center;justify-content:space-between;gap:10px}
+.form.collapsed .formsum{display:flex}
+.form.collapsed{padding:10px 12px}
+.form.collapsed .fields,.form.collapsed .timebox,.form.collapsed #go,.form.collapsed details{display:none}
+.form.collapsed #status{margin-top:6px}
+.form.collapsed #status:empty{display:none}
+.fs-main{all:unset;box-sizing:border-box;flex:1;min-width:0;cursor:pointer;display:flex;flex-wrap:wrap;align-items:center;gap:2px 8px;padding:6px 4px;border-radius:10px}
+.fs-main:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.fs-pt{font-weight:700;font-size:15.5px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fs-ar{color:var(--gold);font-weight:800}
+.fs-main small{flex-basis:100%;color:var(--ink2);font-size:12.5px}
+.fs-actions{display:flex;gap:8px;flex:0 0 auto}
+.fs-btn{font:inherit;min-height:46px;min-width:46px;padding:0 14px;border-radius:12px;border:1px solid var(--line);background:var(--soft);color:var(--ink);font-size:16px;font-weight:700;cursor:pointer}
+.fs-btn.prime{background:var(--btn);color:var(--btn-t);border-color:var(--btn);font-size:14.5px}
+#fab{position:fixed;right:14px;bottom:calc(18px + env(safe-area-inset-bottom));z-index:1200;min-height:50px;padding:0 20px;border-radius:999px;border:0;background:var(--btn);color:var(--btn-t);font:inherit;font-size:15px;font-weight:800;box-shadow:0 10px 24px -8px rgba(11,27,46,.55);cursor:pointer}
 .sug{margin-top:8px;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--card)}
 .sug .hd{padding:7px 12px;font-size:12px;color:var(--ink2);background:var(--soft)}
 .sug button{all:unset;box-sizing:border-box;display:block;width:100%;padding:10px 12px;min-height:54px;border-top:1px solid var(--line);cursor:pointer}
@@ -141,10 +156,20 @@ footer b{color:var(--ink)}
 <body>
 <div class="hero"><div class="wrap">
   <div><h1>가는길</h1><p>출발지와 도착지만 넣으면 대중교통·택시·자가용을 비교합니다.</p></div>
-  <div class="stamp">업데이트<b>10.01 09:48</b></div>
+  <div class="stamp">업데이트<b>10.01 10:52</b></div>
 </div></div>
 <div class="wrap">
-<section class="form">
+<section class="form" id="formBox">
+  <div class="formsum" id="formSum" hidden>
+    <button class="fs-main" id="fsEdit" aria-label="검색 조건 수정">
+      <span class="fs-pt" id="fsFrom"></span><span class="fs-ar">→</span><span class="fs-pt" id="fsTo"></span>
+      <small id="fsTime"></small>
+    </button>
+    <div class="fs-actions">
+      <button class="fs-btn" id="fsSwap" aria-label="출발·도착을 바꿔 다시 계산">⇅</button>
+      <button class="fs-btn prime" id="fsNew">새 검색</button>
+    </div>
+  </div>
   <div class="fields">
     <div class="fld orig">
       <label for="from">출발지</label>
@@ -177,6 +202,7 @@ footer b{color:var(--ink)}
   </details>
 </section>
 
+<button id="fab" hidden aria-label="맨 위로 가서 새로 검색">↑ 새 검색</button>
 <div id="result" hidden>
   <div class="warn" id="geoWarn" hidden></div>
   <div class="tabbar" id="best" role="tablist" aria-label="이동 수단"></div>
@@ -254,7 +280,7 @@ footer b{color:var(--ink)}
   <div id="hist"></div>
 </section>
 
-<footer><b>최종 업데이트 2026-10-01 09:48 (KST)</b><br>노선·역 위치·지도 © OpenStreetMap contributors · 경로 © OSRM · 대중교통 © ODsay(키 사용 시) · 지하철 도착 © 서울 열린데이터광장(서울교통공사 등) · 고속도로 소통 © 한국도로공사. 표시 값은 추정이며 실제와 다를 수 있습니다.</footer>
+<footer><b>최종 업데이트 2026-10-01 10:52 (KST)</b><br>노선·역 위치·지도 © OpenStreetMap contributors · 경로 © OSRM · 대중교통 © ODsay(키 사용 시) · 지하철 도착 © 서울 열린데이터광장(서울교통공사 등) · 고속도로 소통 © 한국도로공사. 표시 값은 추정이며 실제와 다를 수 있습니다.</footer>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
@@ -986,7 +1012,7 @@ function drawTransit(i){
 }
 function setArrStn(n){var c=S.arrStn!==n;S.arrStn=n||'';$('arrStn').textContent=n||'-';if(c){$('arrList').innerHTML='';$('arrNote').textContent='';if(n)loadArrivals()}}
 
-function render(){
+function render(fresh){
   var o=S.o,d=S.d,dt=S.dt,dr=S.dr,paths=S.paths;
   var w=[o,d].filter(function(p){return p.approx||p.relaxed||p.note}).map(function(p){return p.note?'<b>'+esc(p.name)+'</b>은(는) 저장된 대략 위치(<b>'+esc(p.note)+'</b>)로 계산했습니다. 정확한 위치는 지도앱에서 복사한 "위도,경도"를 입력해 주세요.':p.approx?'<b>'+esc(p.name)+'</b>의 번지 위치는 지도 데이터에 없어 <b>'+esc(p.used)+'</b> 중심 좌표로 계산했습니다. 실제와 수백 m~수 km 차이가 날 수 있습니다.':'<b>'+esc(p.name)+'</b> 검색어로는 찾지 못해 <b>'+esc(p.used)+'</b>(으)로 다시 검색한 위치입니다. 지도 핀이 맞는지 확인하세요.'});
   if(dr.approx)w.push('<b>도로 경로 조회 실패</b> · 직선거리 ×1.4, 평균 35km/h로 추정했습니다. 지도 점선은 실제 도로가 아니며 요금·시간의 정확도가 낮습니다. 지도앱으로 확인하세요.');
@@ -1050,7 +1076,7 @@ function render(){
 
   $('result').hidden=false;
   S.trIdx=0;showTab(S.tab||'transit');
-  try{$('best').scrollIntoView({behavior:'smooth',block:'start'})}catch(e){}
+  if(fresh){collapseForm();try{$('formBox').scrollIntoView({behavior:'smooth',block:'start'})}catch(e){}}else updateFab();
 }
 
 /* ---- 실행 ---- */
@@ -1063,7 +1089,8 @@ function run(){
   if(fq===tq){status('출발지와 도착지가 같습니다. 다른 장소를 입력하세요.',true);return}
   var dt=$('when').value?new Date($('when').value):new Date();
   if(!isFinite(dt.getTime())){status('출발시간을 확인하세요.',true);return}
-  $('result').hidden=true;
+  var keepY=KEEP_POS?(window.scrollY||document.documentElement.scrollTop):null;
+  if(!KEEP_POS)$('result').hidden=true;
   $('go').disabled=true;$('go').textContent='계산 중…';status('위치를 찾는 중…');
   Promise.resolve().then(function(){return Promise.all([geocodeField('from'),geocodeField('to')])}).then(function(r){
     var o=r[0],d=r[1];if(hav(o,d)<1)throw new Error('두 장소의 위치가 같습니다. 검색 결과 또는 좌표를 확인하세요.');status('도로 경로와 대중교통을 조회하는 중…');
@@ -1100,11 +1127,11 @@ function run(){
       var enh=(off&&off.length)?enhanceFeeder(off[0],o,d).catch(function(){}):Promise.resolve();
       return Promise.all([exDelay(x[0],x[1]),enh]).then(function(rr){var exd=rr[0];
         S={o:o,d:d,dt:dt,dr:x[0],ex:x[1],exd:exd,ods:od,filt:filt,paths:real?od:off,walkRule:walkRule,so:so,sd:sd,est:transitEstimate(o,d,so,sd),tab:S.tab};
-        render();status('');saveHist(fq,tq);
+        var fresh=!KEEP_POS;KEEP_POS=false;render(fresh);status('');saveHist(fq,tq);if(keepY!==null){window.scrollTo(0,keepY);setTimeout(function(){window.scrollTo(0,keepY)},350)}
       });
     });
   }).catch(function(e){status(e.name==='AbortError'?'응답이 늦습니다. 잠시 후 다시 시도하세요.':e.message,true)})
-    .then(function(){$('go').disabled=false;$('go').textContent='경로 계산'});
+    .then(function(){KEEP_POS=false;$('go').disabled=false;$('go').textContent='경로 계산'});
 }
 
 /* ---- 기록 · 설정 ---- */
@@ -1134,13 +1161,36 @@ var SET=['odsay','nearn','walklim','wspd','subfare','kakao','tbase','tbasem','tu
 function loadSet(){SET.forEach(function(k){var v=LS.get('rt_'+k,null);if(v!==null)$(k).value=v})}
 Array.prototype.forEach.call(document.querySelectorAll('[data-save]'),function(b){b.onclick=function(){
   var bad=validateSettings();if(bad){status(bad,true);return}
-  SET.forEach(function(k){LS.set('rt_'+k,$(k).value)});status('설정을 저장했습니다.');if(S.o)run()}});
+  SET.forEach(function(k){LS.set('rt_'+k,$(k).value)});status('설정을 저장했습니다.');if(S.o){KEEP_POS=true;run()}}});
 $('trTl').addEventListener('click',function(e){
   var b=e.target.closest&&e.target.closest('button.pos');if(!b)return;
   var line=b.dataset.line,stn=b.dataset.stn,cur=getPos(line,stn);
   var v=window.prompt(stn+' '+line+' 탑승 위치\n예: 4-2 (4번째 칸, 2번째 문)\n비우면 지정을 지웁니다.',cur);
   if(v===null)return;setPos(line,stn,v);drawTransit(S.trIdx||0);
 });
+var KEEP_POS=false;   // 설정 저장 후 재계산 때는 화면 위치를 유지
+/* ---- 검색 후 입력창 접기 / 새 검색으로 쉽게 돌아가기 ---- */
+function fmtHM(d){return pad(d.getHours())+':'+pad(d.getMinutes())}
+function collapseForm(){
+  $('fsFrom').textContent=$('from').value.trim();$('fsTo').textContent=$('to').value.trim();
+  var d=S.dt||new Date();$('fsTime').textContent=(d.getMonth()+1)+'/'+d.getDate()+' '+fmtHM(d)+' 출발 · 눌러서 수정';
+  $('formSum').hidden=false;$('formBox').classList.add('collapsed');
+  try{if(!(history.state&&history.state.rc))history.pushState({rc:1},'')}catch(e){}
+  updateFab();
+}
+function expandForm(focusTo){
+  $('formBox').classList.remove('collapsed');$('formSum').hidden=true;
+  try{window.scrollTo({top:0,behavior:'smooth'})}catch(e){window.scrollTo(0,0)}
+  if(focusTo){setTimeout(function(){var t=$('to');try{t.focus({preventScroll:true})}catch(e){t.focus()}try{t.select()}catch(e){}},250)}
+  updateFab();
+}
+function updateFab(){var show=!$('result').hidden&&(window.scrollY||document.documentElement.scrollTop)>260;$('fab').hidden=!show}
+$('fsEdit').onclick=function(){expandForm(false)};
+$('fsNew').onclick=function(){expandForm(true)};
+$('fab').onclick=function(){expandForm(true)};
+$('fsSwap').onclick=function(){$('swap').onclick();run()};
+window.addEventListener('scroll',updateFab,{passive:true});
+window.addEventListener('popstate',function(){if($('formBox').classList.contains('collapsed'))expandForm(false)});
 $('go').onclick=run;$('now').onclick=setNow;$('arrBtn').onclick=function(){arrCache={};loadArrivals();if(S.paths)fillArrivals(S.paths[S.trIdx||0])};
 setInterval(function(){if(!document.hidden&&S.paths&&S.tab==='transit'&&!$('result').hidden){Object.keys(arrCache).forEach(function(k){if(k.charAt(0)==='s')delete arrCache[k]});fillArrivals(S.paths[S.trIdx||0],true)}},30000);
 $('swap').onclick=function(){var a=$('from').value;$('from').value=$('to').value;$('to').value=a;var pa=PICK.from;PICK.from=PICK.to;PICK.to=pa;showPick('from');showPick('to');hideSug('from');hideSug('to')};
