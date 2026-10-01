@@ -141,7 +141,7 @@ footer b{color:var(--ink)}
 <body>
 <div class="hero"><div class="wrap">
   <div><h1>가는길</h1><p>출발지와 도착지만 넣으면 대중교통·택시·자가용을 비교합니다.</p></div>
-  <div class="stamp">업데이트<b>09.30 22:25</b></div>
+  <div class="stamp">업데이트<b>10.01 09:48</b></div>
 </div></div>
 <div class="wrap">
 <section class="form">
@@ -254,7 +254,7 @@ footer b{color:var(--ink)}
   <div id="hist"></div>
 </section>
 
-<footer><b>최종 업데이트 2026-09-30 22:25 (KST)</b><br>노선·역 위치·지도 © OpenStreetMap contributors · 경로 © OSRM · 대중교통 © ODsay(키 사용 시) · 지하철 도착 © 서울 열린데이터광장(서울교통공사 등) · 고속도로 소통 © 한국도로공사. 표시 값은 추정이며 실제와 다를 수 있습니다.</footer>
+<footer><b>최종 업데이트 2026-10-01 09:48 (KST)</b><br>노선·역 위치·지도 © OpenStreetMap contributors · 경로 © OSRM · 대중교통 © ODsay(키 사용 시) · 지하철 도착 © 서울 열린데이터광장(서울교통공사 등) · 고속도로 소통 © 한국도로공사. 표시 값은 추정이며 실제와 다를 수 있습니다.</footer>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
@@ -411,7 +411,8 @@ function walkMpm(){return num('wspd',4.5)*1000/60}
 var WALK_DETOUR=1.3;
 function walkMin(m){return m*WALK_DETOUR/walkMpm()}
 function walkLimit(){var v=num('walklim',7);return v>0?v:7}
-function farAccess(dist){return walkMin(dist)>walkLimit()}                 // 도보 한도 초과 → 버스로 역까지 이동
+function busFeasible(dist){return dist>=700}                               // 직선 700m 미만은 버스 구간이 성립하지 않음
+function farAccess(dist){return walkMin(dist)>walkLimit()&&busFeasible(dist)}                 // 도보 한도 초과 → 버스로 역까지 이동
 function busAccessMin(dist){return 3+6+dist*WALK_DETOUR/300}                // 정류장 도보 3분 + 대기 6분 + 주행(시속 18km)
 function accessMin(dist){return farAccess(dist)?busAccessMin(dist):walkMin(dist)}
 function nearStations(p){
@@ -419,7 +420,7 @@ function nearStations(p){
   for(var i=0;i<GN.length;i++){var d=hav(p,{lat:GN[i][1],lng:GN[i][2]});if(d<25000)arr.push({idx:i,name:GN[i][0]+'역',dist:d,lat:GN[i][1],lng:GN[i][2],lines:linesAt(i)})}
   arr.sort(function(x,y){return x.dist-y.dist});
   var n=parseInt(($('nearn')&&$('nearn').value)||'1',10);
-  if(arr.length&&farAccess(arr[0].dist))return arr.slice(0,3);   // 가장 가까운 역도 도보 한도 초과: 버스로 갈 수 있는 역 후보 3곳(예: 일원·수서)
+  if(arr.length&&walkMin(arr[0].dist)>walkLimit())return arr.slice(0,3);   // 가장 가까운 역도 도보 한도 초과: 버스로 갈 수 있는 역 후보 3곳(예: 일원·수서)
   return arr.slice(0,n===3?3:1);
 }
 /* 내장 노선망 라우팅 (OSM 노선 데이터, 다익스트라: 승차 대기 4분, 환승 6분) */
@@ -438,7 +439,35 @@ function routeFrom(src){
   }
   return {dist:dist,prev:prev};
 }
+var FEEDER_DATE='2026-10-01';
+var FEEDER={"래미안강남힐즈":{"name":"래미안강남힐즈","lat":37.47412411798923,"lng":127.09408976051222,"r":450,"to":{"일원":[{"legs":[{"w":5,"bus":"4425","busID":581,"s":"래미안강남힐즈","sid":82161,"sx":127.097342,"sy":37.472344,"e":"일원본동주민센터","eid":108577,"ex":127.084578,"ey":37.483527,"t":17,"n":10}],"wEnd":1,"total":23,"pay":1500},{"legs":[{"w":5,"bus":"강남03","busID":1506,"s":"래미안강남힐즈","sid":82161,"sx":127.097342,"sy":37.472344,"e":"강남데시앙포레정문","eid":86026,"ex":127.089181,"ey":37.481581,"t":20,"n":14}],"wEnd":8,"total":33,"pay":1200}],"수서":[{"legs":[{"w":5,"bus":"8441","busID":628,"s":"래미안강남힐즈","sid":82161,"sx":127.097342,"sy":37.472344,"e":"수서역5번출구","eid":109006,"ex":127.102651,"ey":37.486964,"t":11,"n":5}],"wEnd":1,"total":17,"pay":1500},{"legs":[{"w":5,"bus":"강남03","busID":1506,"s":"래미안강남힐즈","sid":82161,"sx":127.097342,"sy":37.472344,"e":"수서역5번출구.이마트앞","eid":81255,"ex":127.10264,"ey":37.486973,"t":12,"n":6}],"wEnd":1,"total":18,"pay":1200},{"legs":[{"w":5,"bus":"2412","busID":981,"s":"래미안강남힐즈","sid":82161,"sx":127.097342,"sy":37.472344,"e":"수서역5번출구","eid":109006,"ex":127.102651,"ey":37.486964,"t":12,"n":6}],"wEnd":1,"total":18,"pay":1500}],"대청":[{"legs":[{"w":5,"bus":"4425","busID":581,"s":"래미안강남힐즈","sid":82161,"sx":127.097342,"sy":37.472344,"e":"궁마을","eid":108898,"ex":127.097321,"ey":37.485454,"t":13,"n":7},{"w":0,"bus":"3413","busID":1029,"s":"궁마을","sid":108898,"sx":127.097321,"sy":37.485454,"e":"대청역6번출구","eid":108403,"ex":127.078636,"ey":37.49324,"t":15,"n":7}],"wEnd":1,"total":34,"pay":1500},{"legs":[{"w":5,"bus":"8441","busID":628,"s":"래미안강남힐즈","sid":82161,"sx":127.097342,"sy":37.472344,"e":"수서역5번출구","eid":109006,"ex":127.102651,"ey":37.486964,"t":11,"n":5},{"w":3,"bus":"3413","busID":1029,"s":"수서역1번출구","sid":108946,"sx":127.100692,"sy":37.487237,"e":"대청역6번출구","eid":108403,"ex":127.078636,"ey":37.49324,"t":16,"n":8}],"wEnd":1,"total":36,"pay":1500},{"legs":[{"w":5,"bus":"강남03","busID":1506,"s":"래미안강남힐즈","sid":82161,"sx":127.097342,"sy":37.472344,"e":"궁마을","eid":108898,"ex":127.097321,"ey":37.485454,"t":16,"n":10},{"w":0,"bus":"3413","busID":1029,"s":"궁마을","sid":108898,"sx":127.097321,"sy":37.485454,"e":"대청역6번출구","eid":108403,"ex":127.078636,"ey":37.49324,"t":15,"n":7}],"wEnd":1,"total":37,"pay":1500}]},"from":{"일원":[{"legs":[{"w":2,"bus":"4425","busID":581,"s":"일원본동주민센터","sid":108594,"sx":127.085913,"sy":37.483439,"e":"래미안강남힐즈","eid":82160,"ex":127.095635,"ey":37.472376,"t":17,"n":10}],"wEnd":4,"total":23,"pay":1500},{"legs":[{"w":7,"bus":"강남03","busID":1506,"s":"강남데시앙포레정문","sid":86027,"sx":127.088745,"sy":37.48119,"e":"래미안강남힐즈","eid":82160,"ex":127.095635,"ey":37.472376,"t":17,"n":10}],"wEnd":4,"total":28,"pay":1200},{"legs":[{"w":6,"bus":"402/3426","busID":1050,"s":"시립수서청소년센터","sid":151815,"sx":127.088916,"sy":37.483867,"e":"래미안포레아파트","eid":206516,"ex":127.107364,"ey":37.475709,"t":13,"n":7},{"w":1,"bus":"440","busID":1065,"s":"디아크리온강남아파트","sid":206515,"sx":127.107721,"sy":37.476162,"e":"래미안강남힐즈","eid":82160,"ex":127.095635,"ey":37.472376,"t":8,"n":3}],"wEnd":4,"total":32,"pay":1500}],"수서":[{"legs":[{"w":1,"bus":"강남03","busID":1506,"s":"수서역6번출구","sid":108992,"sx":127.101895,"sy":37.486832,"e":"래미안강남힐즈","eid":82160,"ex":127.095635,"ey":37.472376,"t":11,"n":5}],"wEnd":4,"total":16,"pay":1200},{"legs":[{"w":1,"bus":"2412","busID":981,"s":"수서역6번출구","sid":108992,"sx":127.101895,"sy":37.486832,"e":"래미안강남힐즈","eid":82160,"ex":127.095635,"ey":37.472376,"t":11,"n":5}],"wEnd":4,"total":16,"pay":1500},{"legs":[{"w":1,"bus":"4425","busID":581,"s":"수서역6번출구","sid":108992,"sx":127.101895,"sy":37.486832,"e":"래미안강남힐즈","eid":82160,"ex":127.095635,"ey":37.472376,"t":12,"n":6}],"wEnd":4,"total":17,"pay":1500}],"대청":[{"legs":[{"w":1,"bus":"3413","busID":1029,"s":"대청역6번출구","sid":108403,"sx":127.078636,"sy":37.49324,"e":"수서119안전센터앞","eid":108792,"ex":127.093887,"ey":37.484221,"t":12,"n":7},{"w":0,"bus":"4425","busID":581,"s":"수서119안전센터앞","sid":108792,"sx":127.093887,"sy":37.484221,"e":"래미안강남힐즈","eid":82160,"ex":127.095635,"ey":37.472376,"t":15,"n":8}],"wEnd":4,"total":32,"pay":1500},{"legs":[{"w":1,"bus":"3413","busID":1029,"s":"대청역6번출구","sid":108403,"sx":127.078636,"sy":37.49324,"e":"수서119안전센터앞","eid":108792,"ex":127.093887,"ey":37.484221,"t":12,"n":7},{"w":2,"bus":"강남03","busID":1506,"s":"수서교회.수서동성당앞","sid":86273,"sx":127.094755,"sy":37.48347,"e":"래미안강남힐즈","eid":82160,"ex":127.095635,"ey":37.472376,"t":14,"n":7}],"wEnd":4,"total":33,"pay":1500},{"legs":[{"w":1,"bus":"강남01","busID":1504,"s":"대청역","sid":108440,"sx":127.079586,"sy":37.493193,"e":"푸른마을아파트앞","eid":108491,"ex":127.080594,"ey":37.482956,"t":10,"n":5},{"w":2,"bus":"4425","busID":581,"s":"상록수아파트앞","sid":108525,"sx":127.082166,"sy":37.482887,"e":"래미안강남힐즈","eid":82160,"ex":127.095635,"ey":37.472376,"t":18,"n":11}],"wEnd":4,"total":35,"pay":1500}]}},"서울아산병원":{"name":"서울아산병원","lat":37.526200614508994,"lng":127.10761409822122,"r":450,"to":{"몽촌토성":[{"legs":[{"w":1,"bus":"4318","busID":1711,"s":"서울아산병원동관","sid":109098,"sx":127.107163,"sy":37.526906,"e":"잠실4동주민센터.파크리오B상가","eid":90620,"ex":127.113307,"ey":37.52014,"t":10,"n":4}],"wEnd":4,"total":15,"pay":1500}],"강동구청":[{"legs":[{"w":1,"bus":"112-5","busID":8022,"s":"서울아산병원동관","sid":163232,"sx":127.107456,"sy":37.527016,"e":"강동구청역.농협중앙회","eid":152472,"ex":127.120091,"ey":37.529147,"t":10,"n":4}],"wEnd":3,"total":14,"pay":1650},{"legs":[{"w":1,"bus":"4318","busID":1711,"s":"서울아산병원동관","sid":163232,"sx":127.107456,"sy":37.527016,"e":"토성오거리","eid":152586,"ex":127.119117,"ey":37.53214,"t":16,"n":10}],"wEnd":3,"total":20,"pay":1500}],"한성백제":[{"legs":[{"w":3,"bus":"4318","busID":1711,"s":"서울아산병원장례식장","sid":152587,"sx":127.10737,"sy":37.524682,"e":"잠실4동주민센터.파크리오B상가","eid":90620,"ex":127.113307,"ey":37.52014,"t":9,"n":3}],"wEnd":7,"total":19,"pay":1500}]},"from":{"몽촌토성":[{"legs":[{"w":6,"bus":"4318","busID":1711,"s":"잠실래미안아이파크.잠실파크리오","sid":109128,"sx":127.109121,"sy":37.519243,"e":"서울아산병원동관","eid":163232,"ex":127.107456,"ey":37.527016,"t":12,"n":6}],"wEnd":1,"total":19,"pay":1500},{"legs":[{"w":2,"bus":"340","busID":1026,"s":"몽촌토성역.한성백제역","sid":109200,"sx":127.114552,"sy":37.517239,"e":"풍납동극동.쌍용아파트","eid":109273,"ex":127.118637,"ey":37.526721,"t":8,"n":2},{"w":1,"bus":"112-5","busID":8022,"s":"풍납동극동.쌍용아파트","sid":109255,"sx":127.118061,"sy":37.526654,"e":"서울아산병원동관","eid":163232,"ex":127.107456,"ey":37.527016,"t":10,"n":5}],"wEnd":1,"total":22,"pay":1650},{"legs":[{"w":2,"bus":"3411","busID":1027,"s":"몽촌토성역.세계평화의문","sid":5028694,"sx":127.113521,"sy":37.518294,"e":"풍납동극동.쌍용아파트","eid":109273,"ex":127.118637,"ey":37.526721,"t":8,"n":2},{"w":1,"bus":"112-5","busID":8022,"s":"풍납동극동.쌍용아파트","sid":109255,"sx":127.118061,"sy":37.526654,"e":"서울아산병원동관","eid":163232,"ex":127.107456,"ey":37.527016,"t":10,"n":5}],"wEnd":1,"total":22,"pay":1650}],"강동구청":[{"legs":[{"w":3,"bus":"4318","busID":1711,"s":"토성오거리","sid":152586,"sx":127.119117,"sy":37.53214,"e":"서울아산병원동관","eid":109098,"ex":127.107163,"ey":37.526906,"t":10,"n":5}],"wEnd":1,"total":14,"pay":1500},{"legs":[{"w":1,"bus":"112-5","busID":8022,"s":"영파여고.강동구청역","sid":109305,"sx":127.12062,"sy":37.531314,"e":"서울아산병원동관","eid":163232,"ex":127.107456,"ey":37.527016,"t":12,"n":7}],"wEnd":1,"total":14,"pay":1650},{"legs":[{"w":1,"bus":"강동01","busID":1519,"s":"영파여고.강동구청역","sid":109305,"sx":127.12062,"sy":37.531314,"e":"올림픽대교남단","eid":163227,"ex":127.115378,"ey":37.526778,"t":8,"n":3}],"wEnd":10,"total":19,"pay":1200}],"한성백제":[{"legs":[{"w":7,"bus":"4318","busID":1711,"s":"올림픽회관","sid":109214,"sx":127.115152,"sy":37.520992,"e":"서울아산병원동관","eid":163232,"ex":127.107456,"ey":37.527016,"t":10,"n":5}],"wEnd":1,"total":18,"pay":1500},{"legs":[{"w":2,"bus":"340","busID":1026,"s":"몽촌토성역.한성백제역","sid":109200,"sx":127.114552,"sy":37.517239,"e":"풍납동극동.쌍용아파트","eid":109273,"ex":127.118637,"ey":37.526721,"t":8,"n":2},{"w":1,"bus":"112-5","busID":8022,"s":"풍납동극동.쌍용아파트","sid":109255,"sx":127.118061,"sy":37.526654,"e":"서울아산병원동관","eid":163232,"ex":127.107456,"ey":37.527016,"t":10,"n":5}],"wEnd":1,"total":22,"pay":1650},{"legs":[{"w":2,"bus":"30","busID":8000,"s":"몽촌토성역.한성백제역","sid":109200,"sx":127.114552,"sy":37.517239,"e":"풍납동극동.쌍용아파트","eid":109273,"ex":127.118637,"ey":37.526721,"t":8,"n":2},{"w":1,"bus":"112-5","busID":8022,"s":"풍납동극동.쌍용아파트","sid":109255,"sx":127.118061,"sy":37.526654,"e":"서울아산병원동관","eid":163232,"ex":127.107456,"ey":37.527016,"t":10,"n":5}],"wEnd":1,"total":22,"pay":1650}]}}};
+function verifiedFeeder(pt,stn,first){
+  var key=String(stn.name).replace(/역$/,'');
+  for(var pn in FEEDER){var p=FEEDER[pn];if(hav(pt,{lat:p.lat,lng:p.lng})>p.r)continue;
+    var L=(first?p.to:p.from)[key];if(!L||!L.length)continue;
+    var best=null,bt=1e9;L.forEach(function(o){var t=verifiedMin(o);if(t<bt){bt=t;best=o}});
+    if(best)return best;}
+  return null;
+}
+function verifiedMin(o){return o.legs.reduce(function(a,g){return a+g.w+g.t},0)+o.wEnd+5+(o.legs.length-1)*4}   // 첫 버스 대기 5분 + 환승 대기 4분(추정)
+function busNames(o){return o.legs.map(function(g){return g.bus+'번'}).join(' → ')}
+function accessMinFor(stn,pt,first){if(farAccess(stn.dist)){var v=verifiedFeeder(pt,stn,first);if(v)return verifiedMin(v)}return accessMin(stn.dist)}
 function feederLeg(first,st,pt,dist){
+  var vf=verifiedFeeder(pt,st,first);
+  if(vf){
+    var out=[];
+    vf.legs.forEach(function(g,i){
+      if(g.w>0)out.push({trafficType:3,sectionTime:g.w,distance:0});
+      out.push({trafficType:2,verified:true,lane:[{busNo:g.bus,busID:g.busID}],startName:g.s,endName:g.e,startID:g.sid,
+        sectionTime:g.t,stationCount:g.n,startX:g.sx,startY:g.sy,endX:g.ex,endY:g.ey,
+        passStopList:{stations:[{stationName:g.s,x:g.sx,y:g.sy},{stationName:g.e,x:g.ex,y:g.ey}]}});
+    });
+    if(vf.wEnd>0)out.push({trafficType:3,sectionTime:vf.wEnd,distance:0});
+    return out;
+  }
+  return [feederLegEst(first,st,pt,dist)];
+}
+function feederLegEst(first,st,pt,dist){
   var m=Math.round(busAccessMin(dist)),ride=Math.max(1,Math.round(dist*WALK_DETOUR/300)),
       note='정류장 도보 3분 + 대기 6분 + 승차 약 '+ride+'분 (추정) · 버스 번호는 지도앱으로 확인';
   var A=first?{stationName:'출발지',x:pt.lng,y:pt.lat}:{stationName:st.name,x:st.lng,y:st.lat},
@@ -460,9 +489,9 @@ function buildPath(res,b,l,a,o,d){
   }
   rides=rides.filter(function(r){return r.stops.length>1});
   if(!rides.length)return null;
-  var dw=accessMin(b.dist),total=res.dist[b.idx*64+l]+dw,dsum=0;
+  var dw=accessMinFor(b,d,false),total=res.dist[b.idx*64+l]+dw,dsum=0;
   var fa=farAccess(a.dist),fb=farAccess(b.dist);
-  var sub=[fa?feederLeg(true,a,o,a.dist):{trafficType:3,sectionTime:Math.round(walkMin(a.dist)),distance:Math.round(a.dist*WALK_DETOUR)}];
+  var sub=[].concat(fa?feederLeg(true,a,o,a.dist):[{trafficType:3,sectionTime:Math.round(walkMin(a.dist)),distance:Math.round(a.dist*WALK_DETOUR)}]);
   rides.forEach(function(r,i){
     if(i>0)sub.push({trafficType:3,sectionTime:6,distance:0,transfer:true});
     var f=r.stops[0],e=r.stops[r.stops.length-1];dsum+=r.dist;
@@ -470,16 +499,16 @@ function buildPath(res,b,l,a,o,d){
       startName:GN[f][0]+'역',endName:GN[e][0]+'역',startX:GN[f][2],startY:GN[f][1],endX:GN[e][2],endY:GN[e][1],
       passStopList:{stations:r.stops.map(function(x){return {stationName:GN[x][0],x:GN[x][2],y:GN[x][1]}})}});
   });
-  sub.push(fb?feederLeg(false,b,d,b.dist):{trafficType:3,sectionTime:Math.round(dw),distance:Math.round(b.dist*WALK_DETOUR)});
+  sub=sub.concat(fb?feederLeg(false,b,d,b.dist):[{trafficType:3,sectionTime:Math.round(dw),distance:Math.round(b.dist*WALK_DETOUR)}]);
   var dk=dsum/1000*1.05,fare=num('subfare',1550);
   if(dk>10)fare+=Math.ceil((Math.min(dk,50)-10)/5)*100;
   if(dk>50)fare+=Math.ceil((dk-50)/8)*100;
-  return {info:{totalTime:Math.round(total),payment:fare,busTransitCount:(fa?1:0)+(fb?1:0),subwayTransitCount:rides.length,offline:true},subPath:sub};
+  return {info:{totalTime:Math.round(total),payment:fare,busTransitCount:sub.filter(function(z){return z.trafficType===2}).length,subwayTransitCount:rides.length,offline:true},subPath:sub};
 }
 function offlineRoutes(o,d,so,sd){
   var out=[],seen={};
   so.forEach(function(a){
-    var res=routeFrom({idx:a.idx,walk:accessMin(a.dist)});
+    var res=routeFrom({idx:a.idx,walk:accessMinFor(a,o,true)});
     sd.forEach(function(b){
       if(a.idx===b.idx)return;
       var best=null,bl=null;
@@ -615,7 +644,7 @@ function timelineHtml(p,o,d){
     if(s.trafficType===3){if(s.sectionTime>0)h+='<li class="walk">'+(s.transfer?'환승 이동 ':(s.car?'역까지 차량·버스 이동 ':'도보 '))+s.sectionTime+'분'+(s.distance?' ('+km(s.distance)+')':'')+'</li>';return}
     var r=rideInfo(s);ri++;
     var sub=s.trafficType===1?'<span class="sub">'+platformText(s)+'</span>':'';
-    h+='<li style="--c:'+r.c+'"><b>'+(ri===1?'탑승':'환승 탑승')+'</b> '+esc(s.startName||'')+' '+lchip(r.n,r.c)+(s.trafficType===1?'<br>'+posBtn(r.n,s.startName):'')+sub+(s.estimate?'':'<span class="sub arrt" data-ri="'+(ri-1)+'">도착시간 조회 중…</span>')+(s.estimate?'<span class="sub">약 '+s.sectionTime+'분 · '+esc(s.note||'')+'</span>':'<span class="sub">'+s.stationCount+'정거장 · '+s.sectionTime+'분</span>')+'</li>';
+    h+='<li style="--c:'+r.c+'"><b>'+(ri===1?'탑승':'환승 탑승')+'</b> '+esc(s.startName||'')+' '+lchip(r.n,r.c)+(s.trafficType===1?'<br>'+posBtn(r.n,s.startName):'')+sub+(s.estimate?'':'<span class="sub arrt" data-ri="'+(ri-1)+'">도착시간 조회 중…</span>')+(s.estimate?'<span class="sub">약 '+s.sectionTime+'분 · '+esc(s.note||'')+'</span>':'<span class="sub">'+s.stationCount+'정거장 · '+s.sectionTime+'분'+(s.verified?' · <b>확인된 노선</b> (ODsay '+FEEDER_DATE+')':'')+'</span>')+'</li>';
     var nx=ri<rides.length?rideInfo(rides[ri]):null;
     var ex=[];if(s.trafficType===1){if(s.endExitNo&&s.endExitNo!=='null')ex.push('가까운 출구 '+esc(s.endExitNo)+'번');if(s.door&&s.door!=='null')ex.push('빠른 환승·하차 위치 <b>'+esc(s.door)+'</b>')}
     h+='<li style="--c:'+r.c+'"><b>'+(nx?'환승 하차':'하차')+'</b> '+esc(s.endName||'')+(nx?'<span class="sub">다음 '+lchip(nx.n,nx.c)+'</span>':'')+(ex.length?'<span class="sub">'+ex.join(' · ')+'</span>':'')+'</li>';
@@ -909,7 +938,7 @@ function fillArrivals(p,skipBus){
         if(!a.length){setT('버스 도착 정보 없음',true);return}
         el.innerHTML='🚌 '+(k>0?'<span style="color:var(--ink2);font-weight:400">현재 기준 </span>':'')+a.map(function(x){return inTxt(x.arrivalSec)+' ('+clockAfter(x.arrivalSec)+')'+(x.leftStation!=null?' · '+x.leftStation+'정거장 전':'')}).join(' / ');
         el.style.color='var(--ink)';el.style.fontWeight='600';
-      }).catch(function(e){setT('도착 정보를 가져오지 못했습니다: '+(e.message==='Failed to fetch'?'연결 실패':e.message),true)});
+      }).catch(function(e){if(e.message==='ODsay 키 없음')setT('버스 도착시간은 대중교통 설정에 ODsay 키를 넣으면 표시됩니다.');else setT('도착 정보를 가져오지 못했습니다: '+(e.message==='Failed to fetch'?'연결 실패':e.message),true)});
     }else{setT('')}
   });
 }
@@ -974,11 +1003,15 @@ function render(){
   Array.prototype.forEach.call($('best').children,function(b){b.onclick=function(){showTab(b.dataset.tab)}});
 
   $('walkSub').textContent='도보 '+walkLimit()+'분 이내만 걸음 · 초과는 버스로 이동(추정)';
-  var sth=function(label,arr){
+  var sth=function(label,arr,pt,first){
     if(!arr.length)return '<div class="kv"><span>'+label+'</span><b>25km 내 역 없음</b></div>';
-    return arr.map(function(s,i){return '<div class="kv"><span>'+(i===0?label+' · ':'')+esc(s.name)+'<br>'+(s.lines||[]).map(function(l){return lchip(l,lineColor(l))}).join(' ')+'</span><b>'+(farAccess(s.dist)?'버스(추정) ':'도보 ')+Math.max(1,Math.round(accessMin(s.dist)))+'분<br>'+km(s.dist*WALK_DETOUR)+'</b></div>'}).join('');
+    return arr.map(function(s,i){
+      var far=farAccess(s.dist),vf=far?verifiedFeeder(pt,s,first):null;
+      var how=far?(vf?'버스 '+busNames(vf)+' ':'버스(추정) '):(walkMin(s.dist)>walkLimit()?'도보(한도 초과) ':'도보 ');
+      var mins=Math.max(1,Math.round(vf?verifiedMin(vf):accessMin(s.dist)));
+      return '<div class="kv"><span>'+(i===0?label+' · ':'')+esc(s.name)+'<br>'+(s.lines||[]).map(function(l){return lchip(l,lineColor(l))}).join(' ')+'</span><b>'+how+mins+'분<br>'+km(s.dist*WALK_DETOUR)+(vf?'<br><span style="font-size:12px;font-weight:500;color:var(--ink2)">확인된 노선</span>':'')+'</b></div>'}).join('');
   };
-  $('walkBox').innerHTML=sth('출발지 주변',S.so)+'<div style="height:6px"></div>'+sth('도착지 주변',S.sd)+((S.so[0]&&farAccess(S.so[0].dist))||(S.sd[0]&&farAccess(S.sd[0].dist))?'<p class="note">가장 가까운 역까지 도보 '+walkLimit()+'분을 넘어 버스로 역까지 이동하는 경로로 계산합니다. 후보 역 3곳 중 가장 빠른 조합을 고릅니다.</p>':'');
+  $('walkBox').innerHTML=sth('출발지 주변',S.so,S.o,true)+'<div style="height:6px"></div>'+sth('도착지 주변',S.sd,S.d,false)+((S.so[0]&&farAccess(S.so[0].dist))||(S.sd[0]&&farAccess(S.sd[0].dist))?'<p class="note">가장 가까운 역까지 도보 '+walkLimit()+'분을 넘어 버스로 역까지 이동하는 경로로 계산합니다. 후보 역 3곳 중 가장 빠른 조합을 고릅니다.</p>':'');
 
   $('trSub').textContent=real?(offline?'내장 노선망 계산(추정·운행 여부 미확인)':'ODsay 실경로'):'추정 (노선 없음)';
   $('trOpts').innerHTML=real?paths.map(function(p,i){return '<button data-i="'+i+'">'+(i===0?'최단 ':'대안'+i+' ')+mm(p.info.totalTime)+'</button>'}).join(''):'';
@@ -986,8 +1019,10 @@ function render(){
   var ods=S.ods;
   $('trNote').className='note'+(ods&&ods.err?' err':'');
   $('trNote').textContent=ods&&ods.err?ods.err+' 선택한 출발시간의 운행 여부·막차·추가요금은 미확인입니다.':(S.filt?'도보로 가는 지하철역을 가장 가까운 역 기준 경로로 좁혔습니다. 설정에서 3곳 비교로 바꿀 수 있습니다.':offline?'선택한 출발시간의 운행 여부·막차는 확인하지 않은 OSM 노선 추정입니다. 급행·배차간격·신분당선 등 별도요금은 반영되지 않습니다. 정확한 값은 ODsay 키나 아래 지도앱으로 확인하세요.':(real?'출발시간이 아닌 현재 시각 기준 경로입니다.':'경로를 찾지 못해 거리로만 추정했습니다. 선택한 시간의 운행 여부는 아래 지도앱에서 확인하세요.'));
+  var fv=real&&paths[0].subPath.some(function(z){return z.verified});
   var fe=real&&paths[0].subPath.some(function(z){return z.estimate});
-  if(fe)$('trNote').textContent='지하철역까지 도보 '+walkLimit()+'분을 넘는 구간은 버스로 이동하며 시간·노선을 추정한 값입니다(정류장 도보 3분+대기 6분+승차). 노선 번호는 아래 지도앱 버튼으로 확인하세요. '+$('trNote').textContent;
+  if(fv&&!fe)$('trNote').textContent='역까지 가는 버스는 ODsay로 확인한 노선('+FEEDER_DATE+')입니다. 버스 대기 5분은 추정이며 배차·노선은 바뀔 수 있습니다. '+$('trNote').textContent;
+  else if(fe)$('trNote').textContent='지하철역까지 도보 '+walkLimit()+'분을 넘는 구간은 버스로 이동하며 시간·노선을 추정한 값입니다(정류장 도보 3분+대기 6분+승차). 노선 번호는 아래 지도앱 버튼으로 확인하세요. '+$('trNote').textContent;
   else if(real&&paths[0].info.busReal)$('trNote').textContent='도보 '+walkLimit()+'분을 넘는 역 구간은 ODsay 버스 노선으로 바꿔 계산했습니다. '+$('trNote').textContent;
   $('trLinks').innerHTML=links(o,d);
 
