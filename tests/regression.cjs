@@ -1,12 +1,14 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+process.env.TZ='Asia/Seoul';
 const html=fs.readFileSync(require('node:path').join(__dirname,'../index.html'),'utf8');
 let source=html.split('<script>')[1].split('</script>')[0];
-source=source.replace('loadSet();setNow();renderHist();',`loadSet();setNow();renderHist(); globalThis.app={odsay,taxiCalc,carCost,nightRate,num,coordinate,validateSettings,readHist,hideSug,runSug,fetchJson,run,offlineRoutes,nearStations,geocode,walkMin,getState:()=>S};`);
+source=source.replace('loadSet();setNow();renderHist();',`loadSet();setNow();renderHist(); globalThis.app={odsay,taxiCalc,carCost,nightRate,num,coordinate,validateSettings,readHist,hideSug,runSug,fetchJson,run,offlineRoutes,nearStations,geocode,geocodeField,walkMin,departure,hhmm,arrivalAt,trafficFactor,liveDeparture,freshArrivals,arrivalText,subwayArr,fillArrivals,renderComparison,drawTransit,saveHist,restoreHist,receivedAt,getState:()=>S,setState:x=>S=x,setPick:(id,p)=>PICK[id]=p};`);
 const nodes={},storage={},timers=new Map();let tid=0,fetcher=()=>Promise.reject(new Error('offline'));
-function node(id){return nodes[id]||(nodes[id]={value:'',hidden:true,textContent:'',innerHTML:'',disabled:false,style:{},dataset:{},children:[],classList:{toggle(){}},addEventListener(){},querySelectorAll(){return []},setAttribute(){},scrollIntoView(){}})}
+function node(id){return nodes[id]||(nodes[id]={value:'',hidden:true,textContent:'',innerHTML:'',disabled:false,isConnected:true,style:{},dataset:{},children:[],classList:{toggle(){},add(){},remove(){},contains(){return false}},addEventListener(){},querySelectorAll(){return []},setAttribute(){},scrollIntoView(){}})}
 for(const m of html.matchAll(/<(input|select)[^>]*id="([^"]+)"[^>]*>/g)){node(m[2]).value=(m[0].match(/value="([^"]*)"/)||[])[1]||''}
-node('wspd').value='4.5';node('nearn').value='1';
-const context={document:{getElementById:node,querySelectorAll:()=>[],querySelector:()=>null,addEventListener(){},hidden:false},localStorage:{getItem:k=>storage[k]??null,setItem:(k,v)=>storage[k]=v},setTimeout:(f)=>{timers.set(++tid,f);return tid},clearTimeout:id=>timers.delete(id),setInterval(){},AbortController,fetch:(...a)=>fetcher(...a),Date,console,window:{}};
+node('wspd').value='4.5';node('nearn').value='1';node('people').value='1';
+let arrivalNode=null;
+const context={document:{getElementById:node,querySelectorAll:()=>[],querySelector:q=>q.includes('.arrt')?arrivalNode:null,addEventListener(){},documentElement:{scrollTop:0},hidden:false},localStorage:{getItem:k=>storage[k]??null,setItem:(k,v)=>storage[k]=v},setTimeout:(f)=>{timers.set(++tid,f);return tid},clearTimeout:id=>timers.delete(id),setInterval(){},AbortController,fetch:(...a)=>fetcher(...a),Date,console,history:{state:null,pushState(){}},window:{addEventListener(){},scrollTo(){},scrollY:0}};
 vm.createContext(context);vm.runInContext(source,context);const a=context.app;let count=0;
 function test(name,fn){fn();count++;console.log('PASS '+name)}
 (async()=>{
@@ -39,5 +41,38 @@ function test(name,fn){fn();count++;console.log('PASS '+name)}
  for(let i=0;i<8;i++)await new Promise(r=>setImmediate(r));
  test('도로 API 실패에도 내장 대중교통 결과 유지',()=>{assert.equal(a.getState().dr.approx,true);assert.ok(a.getState().paths.length);assert.equal(node('result').hidden,false);assert.equal(node('go').disabled,false)});
  test('실제 도로 아닌 추정 경고 표시',()=>assert.match(node('geoWarn').innerHTML,/직선거리/));
+ const stamp=t=>new Date(t+9*3600000).toISOString().slice(0,19).replace('T',' ');
+ test('한국시간 입력을 기기 시간대와 무관하게 해석',()=>{let d=a.departure('2026-10-01T23:30');assert.equal(d.toISOString(),'2026-10-01T14:30:00.000Z');assert.equal(a.hhmm(d),'23:30');assert.equal(a.nightRate(new Date('2026-10-01T14:00:00Z')),1.4)});
+ test('자정 넘는 도착과 표시 시간 반올림 일치',()=>{assert.equal(a.arrivalAt(a.departure('2026-10-01T23:50'),20),'다음날 00:10');assert.equal(a.arrivalAt(a.departure('2026-10-01T11:09'),14.6),'11:24')});
+ test('과거·예약 출발에는 현재 도착정보 적용 안 함',()=>{assert.equal(a.liveDeparture(new Date(Date.now()+86400000)),false);assert.equal(a.liveDeparture(new Date(Date.now()-3600000)),false);assert.equal(a.liveDeparture(new Date()),true)});
+ test('5분 지난·미래·시각 없는 열차 응답 차단',()=>{for(let item of [{recptnDt:stamp(Date.now()-8*60000)},{recptnDt:stamp(Date.now()+3*60000)},{}])assert.throws(()=>a.freshArrivals([item]));assert.equal(a.freshArrivals([{recptnDt:stamp(Date.now()-60000)},{recptnDt:stamp(Date.now()-8*60000)}]).length,1)});
+ test('수신 후 지난 시간을 열차 대기시간에서 차감',()=>{let msg=a.arrivalText({recptnDt:stamp(Date.now()-60000),barvlDt:180});assert.match(msg,/2분 후/);assert.match(a.arrivalText({recptnDt:stamp(Date.now()-60000),barvlDt:10}),/예정시각 지남/)});
+ let oldState=a.getState(),p0=oldState.paths[0],p1=JSON.parse(JSON.stringify(p0));p1.info.totalTime=90;p1.info.payment=2100;
+ let comparison={...oldState,dt:new Date(Date.now()+86400000),paths:[p0,p1],people:2,trIdx:0};a.setState(comparison);a.drawTransit(1);
+ test('대안 선택 시 비교·탭·상세 요약 시간 모두 동기화',()=>{assert.match(node('reco').innerHTML,/경로 2번/);assert.match(node('reco').innerHTML,/1시간 30분/);assert.match(node('best').innerHTML,/1시간 30분/);assert.match(node('trSummary').innerHTML,/1시간 30분/)});
+ test('2명 대중교통 총액과 차량 1대 비용 비교',()=>{assert.match(node('reco').innerHTML,/4,200원/);assert.match(node('reco').innerHTML,/1인 약 2,100원/);assert.match(node('trSummary').innerHTML,/2,100원 \/ 1인/)});
+ test('같은 표시시간의 택시·자가용을 모두 예상 최단으로 표시',()=>{assert.match(node('reco').innerHTML,/택시 · 자가용/);assert.equal((node('best').innerHTML.match(/class="badge"/g)||[]).length,2)});
+ a.setState({...comparison,paths:[],trIdx:0});a.drawTransit(0);
+ test('대중교통 경로 없을 때 가상 요금·노선을 추천에서 제외',()=>{assert.match(node('reco').innerHTML,/요금 미확인/);assert.match(node('trSummary').innerHTML,/확인하지 못했습니다/);assert.doesNotMatch(node('trTl').innerHTML,/탑승/)});
+ storage.rt_hist='[]';a.saveHist('같은 이름','도착지',{lat:37.5,lng:127},{lat:37.6,lng:127.1},2);a.saveHist('같은 이름','도착지',{lat:37.51,lng:127},{lat:37.6,lng:127.1},2);
+ test('동명이 장소의 서로 다른 좌표를 검색 기록에 보존',()=>{assert.equal(a.readHist().length,2);assert.equal(a.readHist()[1].from.lat,37.5);assert.equal(a.readHist()[0].people,2)});
+ a.setPick('from',{label:'선택한 지점',lat:37.5,lng:127});let selected=await a.geocodeField('from','선택한 지점',{label:'선택한 지점',lat:37.5,lng:127});
+ test('선택한 장소 좌표로 재계산',()=>assert.equal(selected.lat,37.5));
+ node('from').value='37.5547,126.9706';node('to').value='37.4979,127.0276';node('people').value='2';let job=a.run();
+ test('조회 중 출발지·도착지·설정 변경 잠금',()=>{assert.equal(node('from').disabled,true);assert.equal(node('people').disabled,true)});
+ node('from').value='0,0';node('people').value='4';await job;
+ test('실행 직후 입력이 바뀌어도 계산·요약·기록은 요청 원본 유지',()=>{assert.equal(a.getState().o.lat,37.5547);assert.equal(a.getState().people,2);assert.equal(node('fsFrom').textContent,'37.5547,126.9706');assert.equal(a.readHist()[0].from.lat,37.5547);assert.equal(node('from').disabled,false)});
+ node('people').value='2';node('from').value='서울역';node('to').value='강남역';a.setPick('from',null);
+ await a.restoreHist(a.readHist()[0]);
+ test('기록 선택 시 저장된 좌표·동행 인원 복원',()=>{assert.equal(a.getState().o.lat,37.5547);assert.equal(a.getState().people,2)});
+ let retryCalls=0;fetcher=()=>{retryCalls++;return Promise.reject(new Error('temporary'))};await assert.rejects(a.subwayArr('재시도역'));await assert.rejects(a.subwayArr('재시도역'));
+ test('실패한 도착정보 요청은 캐시에서 제거해 즉시 재시도',()=>assert.equal(retryCalls,2));
+ let ride={trafficType:1,startName:'예약검증역',lane:[{name:'2호선'}],passStopList:{stations:[{stationName:'예약검증역'},{stationName:'다음역'}]}},rp={subPath:[ride]},requestCount=0;
+ arrivalNode=node('test-arrival');a.setState({dt:new Date(Date.now()+86400000),paths:[rp],trIdx:0});fetcher=()=>{requestCount++;return Promise.reject(new Error('unexpected'))};a.fillArrivals(rp);
+ test('예약 출발에는 실시간 열차 조회를 생략',()=>{assert.equal(requestCount,0);assert.match(arrivalNode.textContent,/미제공/)});
+ let resolveArrival;fetcher=()=>Promise.resolve({ok:true,json:()=>new Promise(r=>resolveArrival=r)});a.setState({dt:new Date(),paths:[rp],trIdx:0});a.fillArrivals(rp);await new Promise(r=>setImmediate(r));
+ a.setState({dt:new Date(),paths:[{subPath:[]}],trIdx:0});arrivalNode.textContent='새 경로';resolveArrival({realtimeArrivalList:[{recptnDt:stamp(Date.now()),subwayId:'1002',trainLineNm:'다음역방면',barvlDt:120}]});await new Promise(r=>setImmediate(r));
+ test('늦게 받은 열차 응답이 새 경로를 덮어쓰지 않음',()=>assert.equal(arrivalNode.textContent,'새 경로'));
+ arrivalNode=null;
  console.log(`${count} regression groups passed`);
 })().catch(e=>{console.error(e);process.exitCode=1});

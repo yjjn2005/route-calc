@@ -61,6 +61,12 @@ input:focus-visible,select:focus-visible,button:focus-visible,summary:focus-visi
 .timebox{margin-top:20px}
 .row{display:flex;gap:8px;align-items:stretch}
 .row input{flex:1}
+.row input{min-width:0}
+.trip-extra{margin-top:14px}
+.compare-note{margin:12px 0 0;color:var(--reco-s);font-size:14px;line-height:1.5}
+.rr-n{flex-wrap:wrap;min-width:0}
+.rr-t,.rr-f{min-width:0}
+@media(max-width:520px){.rr{grid-template-columns:1fr auto}.rr-f{grid-column:2;grid-row:auto}.rr-n{grid-row:span 2}.reco-top{align-items:flex-start;flex-wrap:wrap}.reco-main{flex-wrap:wrap}.fs-actions{gap:4px}.fs-btn{padding:0 10px}}
 .ghost{flex:0 0 auto;padding:0 20px;border-radius:var(--r1);border:1px solid var(--gold);background:transparent;color:var(--ink);font:inherit;font-size:15px;font-weight:700;cursor:pointer}
 .btn{width:100%;margin-top:20px;min-height:58px;font:inherit;font-size:18px;font-weight:700;letter-spacing:.02em;border:0;border-radius:var(--r1);background:var(--btn);color:var(--btn-t);cursor:pointer;box-shadow:inset 0 0 0 1px rgba(230,211,174,.25)}
 .btn:active{opacity:.9}
@@ -189,7 +195,7 @@ footer b{color:var(--ink2)}
 .formsum{display:none;align-items:center;justify-content:space-between;gap:10px}
 .form.collapsed .formsum{display:flex}
 .form.collapsed{padding:10px 12px}
-.form.collapsed .fields,.form.collapsed .timebox,.form.collapsed #go,.form.collapsed details{display:none}
+.form.collapsed .fields,.form.collapsed .timebox,.form.collapsed .trip-extra,.form.collapsed #go,.form.collapsed details{display:none}
 .form.collapsed #status{margin-top:6px}
 .form.collapsed #status:empty{display:none}
 .fs-main{all:unset;box-sizing:border-box;flex:1;min-width:0;cursor:pointer;display:flex;flex-wrap:wrap;align-items:center;gap:2px 8px;padding:6px 4px;border-radius:10px}
@@ -224,7 +230,7 @@ footer b{color:var(--ink2)}
 <body>
 <div class="hero"><div class="wrap">
   <div><h1>가는길</h1><p>대중교통 · 택시 · 자가용을 한눈에 비교합니다</p></div>
-  <div class="stamp">업데이트<b>10.01 11:02</b></div>
+  <div class="stamp">업데이트<b>10.01 11:24</b></div>
 </div></div>
 <div class="wrap">
 <section class="form" id="formBox">
@@ -254,11 +260,15 @@ footer b{color:var(--ink2)}
     </div>
   </div>
   <div class="timebox">
-    <label for="when">출발시간</label>
+    <label for="when">출발시간 (한국시간)</label>
     <div class="row">
       <input id="when" type="datetime-local">
       <button class="ghost" id="now">지금</button>
     </div>
+  </div>
+  <div class="trip-extra">
+    <label for="people">동행 인원 (성인 기준)</label>
+    <select id="people"><option value="1">1명</option><option value="2">2명</option><option value="3">3명</option><option value="4">4명</option></select>
   </div>
   <button class="btn" id="go">경로 계산</button>
   <div id="status" role="status"></div>
@@ -311,7 +321,7 @@ footer b{color:var(--ink2)}
 
   <!-- 택시 -->
   <div class="tp" id="tp-taxi">
-    <div class="card"><h2>택시 요금 <small>고속도로 정체 반영 · 일반도로는 시간대 추정</small></h2><div class="tb" id="taxiBox"></div></div>
+    <div class="card"><h2>택시 요금 <small>서울 중형택시 기준 추정</small></h2><div class="tb" id="taxiBox"></div></div>
     <div class="card"><h2>고속도로 실시간 소통 <small>한국도로공사</small></h2><div class="tb" id="exBox-taxi"></div></div>
     <div class="card"><h2>지도</h2><div class="tb"><div class="map" id="map-taxi" style="margin-top:0"></div></div></div>
     <details class="panel">
@@ -328,7 +338,7 @@ footer b{color:var(--ink2)}
 
   <!-- 자가용 -->
   <div class="tp" id="tp-car">
-    <div class="card"><h2>자가용 비용 <small>고속도로 정체 반영 · 일반도로는 시간대 추정</small></h2><div class="tb" id="carBox"></div></div>
+    <div class="card"><h2>자가용 비용 <small>시간대별 추정 · 통행·주차비 직접 입력</small></h2><div class="tb" id="carBox"></div></div>
     <div class="card"><h2>고속도로 실시간 소통 <small>한국도로공사</small></h2><div class="tb" id="exBox-car"></div></div>
     <div class="card"><h2>지도</h2><div class="tb"><div class="map" id="map-car" style="margin-top:0"></div><div class="links" id="carLinks"></div></div></div>
     <details class="panel">
@@ -367,11 +377,16 @@ function short(n){return (n||'').replace('수도권 ','').replace('서울 ','')}
 var BUS='#2F6FDE',GRAY='#7a8797';
 
 function pad(n){return n<10?'0'+n:''+n}
-function setNow(){var d=new Date();$('when').value=d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+'T'+pad(d.getHours())+':'+pad(d.getMinutes())}
+function kst(d){return new Date(d.getTime()+9*3600000)}
+function setNow(){var d=kst(new Date());$('when').value=d.getUTCFullYear()+'-'+pad(d.getUTCMonth()+1)+'-'+pad(d.getUTCDate())+'T'+pad(d.getUTCHours())+':'+pad(d.getUTCMinutes())}
+function departure(value){if(!value)return new Date();var m=String(value).match(/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2})(:\d{2})?$/);return m?new Date(m[1]+(m[2]||':00')+'+09:00'):new Date(NaN)}
+function liveDeparture(dt){return !!dt&&Math.abs(dt.getTime()-Date.now())<=15*60000}
+function arrivalAt(dt,min){var end=new Date(dt.getTime()+Math.round(min)*60000),a=kst(dt),b=kst(end),day=Math.round((Date.UTC(b.getUTCFullYear(),b.getUTCMonth(),b.getUTCDate())-Date.UTC(a.getUTCFullYear(),a.getUTCMonth(),a.getUTCDate()))/86400000);return (day>0?(day===1?'다음날 ':day+'일 후 '):'')+hhmm(end)}
+function people(){var n=Number($('people').value);return n>=1&&n<=4&&Math.floor(n)===n?n:1}
 function won(n){return (Math.round(n/10)*10).toLocaleString('ko-KR')+'원'}
 function mm(m){m=Math.round(m);if(m<60)return m+'분';return Math.floor(m/60)+'시간 '+(m%60)+'분'}
 function km(m){return m<1000?Math.round(m)+'m':(m/1000).toFixed(1)+'km'}
-function hhmm(d){return pad(d.getHours())+':'+pad(d.getMinutes())}
+function hhmm(d){var t=kst(d);return pad(t.getUTCHours())+':'+pad(t.getUTCMinutes())}
 function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
 function num(id,d){var v=parseFloat(String($(id).value).replace(/,/g,''));return !isFinite(v)||v<0||(d>0&&v===0)?d:v}
 function status(t,err){var s=$('status');s.textContent=t;s.className=err?'err':''}
@@ -629,14 +644,14 @@ function driveRoute(o,d){
       return {dist:r.routes[0].distance,dur:r.routes[0].duration,geo:g,hw:hwl,hwDur:hwDur}});
 }
 function trafficFactor(dt){
-  var h=dt.getHours()+dt.getMinutes()/60,wd=dt.getDay()>0&&dt.getDay()<6;
+  var t=kst(dt),h=t.getUTCHours()+t.getUTCMinutes()/60,wd=t.getUTCDay()>0&&t.getUTCDay()<6;
   if(wd&&((h>=7&&h<9.5)||(h>=17&&h<20)))return 1.6;
   if(wd&&h>=9.5&&h<17)return 1.25;
   if(!wd&&h>=10&&h<20)return 1.2;
   if(h>=23||h<5)return 0.85;
   return 1.05;
 }
-function nightRate(dt){var h=dt.getHours();if(h>=23||h<2)return 1.4;if(h<4||h>=22)return 1.2;return 1}
+function nightRate(dt){var h=kst(dt).getUTCHours();if(h>=23||h<2)return 1.4;if(h<4||h>=22)return 1.2;return 1}
 function taxiCalc(distM,durSec,dt){
   var base=num('tbase',4800),bm=num('tbasem',1600),unit=num('tunit',131);
   var dfee=distM>bm?Math.ceil((distM-bm)/unit)*100:0;
@@ -810,7 +825,7 @@ function placeSearch(q){
 }
 function hideSug(id){clearTimeout(sugTimer[id]);sugSeq[id]=(sugSeq[id]||0)+1;var e=$('sug-'+id);e.hidden=true;e.innerHTML=''}
 function clearPick(id){PICK[id]=null;$('pk-'+id).hidden=true;$('pk-'+id).textContent=''}
-function showPick(id){var p=PICK[id];if(!p){$('pk-'+id).hidden=true;return}$('pk-'+id).hidden=false;$('pk-'+id).textContent='📍 '+(p.addr||'위치 선택됨')+' · 선택한 위치로 정확히 계산'}
+function showPick(id){var p=PICK[id];if(!p){$('pk-'+id).hidden=true;return}$('pk-'+id).hidden=false;$('pk-'+id).textContent='📍 '+(p.addr||'위치 선택됨')+' · '+(p.approx?'저장된 대략 위치로 계산':'선택한 위치로 계산')}
 function runSug(id){
   var q=$(id).value.trim(),my=(sugSeq[id]=(sugSeq[id]||0)+1),box=$('sug-'+id);
   if(q.length<2||/^\s*[-+\d.]+\s*,/.test(q)){hideSug(id);return}
@@ -824,9 +839,10 @@ function runSug(id){
       var x=L[+b.dataset.i];$(id).value=x.name;PICK[id]={label:x.name,lat:x.lat,lng:x.lng,addr:x.addr};hideSug(id);showPick(id)}});
   }).catch(function(){if(my===sugSeq[id])box.innerHTML='<div class="none">장소 검색에 실패했습니다. 주소로 직접 입력해 보세요.</div>'});
 }
-function geocodeField(id){
-  var v=$(id).value.trim(),p=PICK[id];
-  if(p&&p.label===v)return Promise.resolve({lat:p.lat,lng:p.lng,name:v,picked:true});
+function validPick(p){return !!p&&typeof p.lat==='number'&&typeof p.lng==='number'&&isFinite(p.lat)&&isFinite(p.lng)&&Math.abs(p.lat)<=90&&Math.abs(p.lng)<=180}
+function geocodeField(id,value,pick){
+  var v=value===undefined?$(id).value.trim():value,p=arguments.length>2?pick:PICK[id];
+  if(validPick(p)&&p.label===v)return Promise.resolve(Object.assign({},p,{name:v,picked:true}));
   return geocode(v);
 }
 ['from','to'].forEach(function(id){
@@ -854,19 +870,30 @@ function carLinks(o,d){
 /* ---- 실시간 지하철 도착 (서울 열린데이터) ---- */
 var API='https://route-calc-api.yjjn2005.workers.dev';
 function arrUrl(stn){return API+'/subway/arrival?station='+encodeURIComponent(stn.replace(/역$/,''))}
+function receivedAt(raw){
+  var s=String(raw||'').trim(),m=s.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})$/);
+  return m?Date.parse(m[1]+'-'+m[2]+'-'+m[3]+'T'+m[4]+':'+m[5]+':'+m[6]+'+09:00'):(/[zZ]$|[+-]\d{2}:?\d{2}$/.test(s)?Date.parse(s):NaN);
+}
+function freshArrivals(list){
+  if(!Array.isArray(list))throw new Error('열차 도착정보 응답 형식을 확인할 수 없습니다.');
+  if(!list.length)return [];
+  var now=Date.now(),fresh=list.filter(function(x){var ts=receivedAt(x.recptnDt);return isFinite(ts)&&now-ts<=5*60000&&ts-now<=60000});
+  if(!fresh.length)throw new Error('도착정보가 5분 이상 지났거나 기준시각을 확인할 수 없습니다. 현재 도착시간으로 안내하지 않습니다. 지도앱에서 확인하세요.');
+  return fresh;
+}
+function arrivalText(x){var age=Math.max(0,(Date.now()-receivedAt(x.recptnDt))/1000),sec=Number(x.barvlDt);return sec>0?(sec>age?inTxt(sec-age)+' ('+clockAfter(sec-age)+')':'예정시각 지남 · 새로고침'):String(x.arvlMsg2||'도착 정보 없음')}
 function loadArrivals(){
   var stn=S.arrStn,request=S;if(!stn){$('arrNote').textContent='조회할 역이 없습니다. 먼저 경로를 계산하세요.';return}
-  var u=arrUrl(stn);
+  if(!liveDeparture(S.dt)){$('arrList').innerHTML='';$('arrNote').className='note';$('arrNote').textContent='선택한 출발시간의 열차 도착정보는 제공되지 않습니다. 출발 직전에 다시 계산하세요.';return}
   $('arrNote').className='note';$('arrNote').textContent='조회 중…';
-  fetchJson(u,{},10000).then(function(r){
+  subwayArr(stn).then(function(list){
     if(S!==request||S.arrStn!==stn)return;
-    if(r.errorMessage&&r.errorMessage.code&&r.errorMessage.code!=='INFO-000')throw new Error(r.errorMessage.message||r.errorMessage.code);
-    var a=r.realtimeArrivalList||[];
+    var a=freshArrivals(list);
     if(!a.length){$('arrList').innerHTML='';$('arrNote').textContent='현재 도착 예정 열차가 없습니다.';return}
     var LN=SUBID;
     $('arrList').innerHTML=a.slice(0,10).map(function(x){
       var ln=LN[x.subwayId]||'',c=lineColor(ln);
-      return '<div class="arr"><span>'+(ln?lchip(ln,c)+' ':'')+esc(x.updnLine||'')+'<br><i>'+esc(x.trainLineNm||'')+'</i></span><b style="text-align:right">'+esc(x.arvlMsg2||'')+'<br><i>'+esc(x.arvlMsg3||'')+'</i></b></div>';
+      return '<div class="arr"><span>'+(ln?lchip(ln,c)+' ':'')+esc(x.updnLine||'')+'<br><i>'+esc(x.trainLineNm||'')+'</i></span><b style="text-align:right">'+esc(arrivalText(x))+'<br><i>'+esc(x.arvlMsg3||'')+'</i></b></div>';
     }).join('');
     $('arrNote').textContent=(a[0].recptnDt||'')+' 기준'
   }).catch(function(e){
@@ -886,6 +913,7 @@ function hwStem(n){return String(n).replace(/\(.*?\)/g,'').replace(/고속국도
 function exCardHtml(){
   var ex=S.ex,hw=S.dr.hw||[];
   if(!ex)return '<p class="note">조회 전입니다.</p>';
+  if(ex.future)return '<p class="note">선택한 출발시간의 고속도로 소통정보는 제공되지 않습니다. 현재 정체를 예약 경로에 더하지 않고 시간대별 혼잡만 추정했습니다.</p>';
   if(ex.err)return '<p class="note err">한국도로공사 정보를 가져오지 못했습니다: '+esc(ex.err)+'</p>';
   var seenK={},L=ex.list.filter(function(x){var k=x.routeName+x.updownTypeCode+x.conzoneName;if(seenK[k]!==undefined){if(+x.speed<+seenK[k].speed){seenK[k].speed=x.speed;seenK[k].timeAvg=x.timeAvg}return false}seenK[k]=x;return true}),t=L.length?L[0]:null,base=t?String(t.stdHour||'').slice(0,2)+':'+String(t.stdHour||'').slice(2,4):'';
   var dirn=function(c){return c==='S'?'상행':c==='E'?'하행':''};
@@ -993,33 +1021,36 @@ function enhanceFeeder(p,o,d){
 
 /* ---- 이용 구간별 실시간 도착(지하철: 서울 열린데이터, 버스: ODsay) ---- */
 var arrCache={};
-function cached(key,fn,ttl){var c=arrCache[key];if(c&&Date.now()-c.t<(ttl||25000))return c.p;var p=fn();arrCache[key]={t:Date.now(),p:p};return p}
+function cached(key,fn,ttl){var c=arrCache[key];if(c&&Date.now()-c.t<(ttl||25000))return c.p;var p=fn().catch(function(e){if(arrCache[key]&&arrCache[key].p===p)delete arrCache[key];throw e});arrCache[key]={t:Date.now(),p:p};return p}
 function clockAfter(sec){return hhmm(new Date(Date.now()+sec*1000))}
 function inTxt(sec){return sec<45?'곧 도착':mm(Math.max(1,Math.round(sec/60)))+' 후'}
 function subwayArr(stn){return cached('s:'+stn,function(){
   return fetchJson(API+'/subway/arrival?station='+encodeURIComponent(String(stn).replace(/역$/,'')),{},10000).then(function(r){
     if(r.errorMessage&&r.errorMessage.code&&r.errorMessage.code!=='INFO-000')throw new Error(r.errorMessage.message||r.errorMessage.code);
-    return r.realtimeArrivalList||[]})})}
+    return freshArrivals(r.realtimeArrivalList||[])})})}
 function busArr(sid){var key=$('odsay').value.trim();if(!key)return Promise.reject(new Error('ODsay 키 없음'));
-  return cached('b:'+sid,function(){return fetchJson('https://api.odsay.com/v1/api/realtimeStation?stationID='+encodeURIComponent(sid)+'&apiKey='+encodeURIComponent(key),{},10000).then(function(r){
+  return cached('b:'+key+':'+sid,function(){return fetchJson('https://api.odsay.com/v1/api/realtimeStation?stationID='+encodeURIComponent(sid)+'&apiKey='+encodeURIComponent(key),{},10000).then(function(r){
     if(r.error){var e=Array.isArray(r.error)?r.error[0]:r.error;throw new Error(e.msg||e.message||'버스 도착 조회 실패')}
     return (r.result&&r.result.real)||[]})})}
 function fillArrivals(p,skipBus){
   if(!p)return;
-  var rides=p.subPath.filter(function(z){return z.trafficType!==3});
+  var request=S,rides=p.subPath.filter(function(z){return z.trafficType!==3});
   rides.forEach(function(s,k){
     var el=document.querySelector('#trTl .arrt[data-ri="'+k+'"]');if(!el)return;
-    var setT=function(t,err){el.textContent=t;el.style.color=err?'var(--warn)':'var(--ink)';el.style.fontWeight=err?'400':'600'};
+    var active=function(){return S===request&&S.paths&&S.paths[S.trIdx||0]===p&&el.isConnected!==false};
+    var setT=function(t,err){if(!active())return;el.textContent=t;el.style.color=err?'var(--warn)':'var(--ink)';el.style.fontWeight=err?'400':'600'};
+    if(!liveDeparture(S.dt)){setT('선택한 출발시간의 도착정보는 미제공');return}
     if(s.trafficType===1){
       var lineN=nrm(short(laneName(s))),next=nrm(nextStopName(s));
       subwayArr(s.startName).then(function(list){
+        if(!active())return;list=freshArrivals(list);
         var L=list.filter(function(a){return nrm(SUBID[a.subwayId]||'')===lineN});
         var D=next?L.filter(function(a){return nrm((a.trainLineNm||'').split('-').pop()).indexOf(next)>-1||(a.trainLineNm||'').indexOf(next)>-1}):L;
         var use=D,dirOk=!!next&&D.length>0;
         if(!dirOk){setT('이동 방향의 열차를 확인하지 못했습니다. 지도앱에서 확인하세요.',true);return}
         if(!use.length){setT('열차 도착 정보 없음 (운행 종료 또는 서울 밖 구간)',true);return}
-        var seenP={},parts=[];use.forEach(function(a){if(parts.length>=2)return;var sec=+a.barvlDt,t=(sec>0?inTxt(sec)+' ('+clockAfter(sec)+')':esc(a.arvlMsg2||''))+(a.arvlMsg3&&sec>0?' · '+esc(a.arvlMsg3):'');if(seenP[t])return;seenP[t]=1;parts.push(t)});
-        el.innerHTML='🚇 '+(k>0?'<span style="color:var(--ink2);font-weight:400">현재 기준 </span>':'')+parts.join(' / ')+(dirOk?'':' <span style="color:var(--ink2);font-weight:400">(방향 미확인)</span>');
+        var seenP={},parts=[];use.forEach(function(a){if(parts.length>=2)return;var t=esc(arrivalText(a))+(a.arvlMsg3?' · '+esc(a.arvlMsg3):'');if(seenP[t])return;seenP[t]=1;parts.push(t)});
+        el.innerHTML='🚇 <span style="color:var(--ink2);font-weight:400">현재 기준 </span>'+parts.join(' / ');
         el.style.color='var(--ink)';el.style.fontWeight='600';
       }).catch(function(e){setT('도착 정보를 가져오지 못했습니다: '+(e.message==='Failed to fetch'?'연결 실패':e.message),true)});
     }else if(s.trafficType===2&&s.startID&&skipBus){
@@ -1027,6 +1058,7 @@ function fillArrivals(p,skipBus){
     }else if(s.trafficType===2&&s.startID){
       var bid=String((s.lane&&s.lane[0]&&s.lane[0].busID)||'');
       busArr(s.startID).then(function(real){
+        if(!active())return;
         var m=real.filter(function(x){return String(x.routeId)===bid});
         if(!m.length){setT('버스 도착 정보 없음 (운행 종료 또는 미제공 노선)',true);return}
         var a=[m[0].arrival1,m[0].arrival2].filter(function(x){return x&&x.arrivalSec>0});
@@ -1057,17 +1089,51 @@ var ICS={
   taxi:'<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 14l1.8-4.6A2 2 0 0 1 7.2 8h9.6a2 2 0 0 1 1.9 1.4L20.5 14v4h-17z"/><circle cx="7.5" cy="17.6" r="1.7"/><circle cx="16.5" cy="17.6" r="1.7"/><rect x="9.5" y="4" width="5" height="2.4" rx=".8"/></svg>',
   car:'<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 14l1.8-4.6A2 2 0 0 1 7.2 8h9.6a2 2 0 0 1 1.9 1.4L20.5 14v4h-17z"/><circle cx="7.5" cy="17.6" r="1.7"/><circle cx="16.5" cy="17.6" r="1.7"/><path d="M7 12h10"/></svg>'
 };
+function renderComparison(){
+  if(!S.o)return;
+  var p=S.paths&&S.paths[S.trIdx||0],dt=S.dt,dr=S.dr,n=S.people||1;
+  var tMin=p?p.info.totalTime:null,tFare=p?p.info.payment*n:null;
+  var durMin=adjDur(dr,trafficFactor(dt),S.exd)/60,tx=taxiCalc(dr.dist,durMin*60,dt),car=carCost(dr.dist);
+  var rows=[['transit','대중교통',tMin,tFare,p&&p.info.offline?'약 ':''],['taxi','택시',durMin,tx.total,'약 '],['car','자가용',durMin,car.total,'약 ']];
+  var available=rows.filter(function(r){return r[2]!==null}),fast=Math.min.apply(null,available.map(function(r){return Math.round(r[2])})),cheap=Math.min.apply(null,available.map(function(r){return Math.round(r[3]/10)}));
+  var winners=available.filter(function(r){return Math.round(r[2])===fast}),win=winners[0];
+  var fastest=function(r){return r[2]!==null&&Math.round(r[2])===fast};
+  $('best').innerHTML=rows.map(function(r){return '<button role="tab" data-tab="'+r[0]+'" aria-selected="'+(r[0]===S.tab)+'">'+(fastest(r)?'<em class="badge">예상 최단</em>':'')+ICS[r[0]]+'<span class="m">'+r[1]+'</span><span class="f">'+(r[2]===null?'경로 미확인':mm(r[2]))+'</span></button>'}).join('');
+  Array.prototype.forEach.call($('best').children,function(b){b.classList.toggle('on',b.dataset.tab===S.tab);b.onclick=function(){showTab(b.dataset.tab)}});
+  $('reco').innerHTML='<div class="reco-top"><span>예상 최단 · '+n+'명 총 비용 비교</span><span>'+hhmm(dt)+' 출발 · 도착 '+arrivalAt(dt,win[2])+'</span></div>'+
+    '<div class="reco-main"><span class="reco-mode">'+winners.map(function(r){return r[1]}).join(' · ')+'</span><span class="reco-time">'+mm(win[2])+'</span></div>'+
+    '<div class="reco-sub">'+(p?'선택한 대중교통 경로 '+((S.trIdx||0)+1)+'번 기준':'대중교통 경로 미확인 · 지도앱 확인 필요')+'</div>'+
+    '<div class="reco-rows">'+rows.map(function(r){return '<button class="rr" data-go="'+r[0]+'"><span class="rr-n">'+ICS[r[0]]+r[1]+(fastest(r)?' <span class="tag">예상 최단</span>':'')+(r[3]!==null&&Math.round(r[3]/10)===cheap?' <span class="tag alt">최저비용</span>':'')+'</span><span class="rr-t">'+(r[2]===null?'경로 미확인':mm(r[2]))+'</span><span class="rr-f">'+(r[3]===null?'요금 미확인':r[4]+won(r[3])+(n>1?'<br>1인 약 '+won(r[3]/n):''))+'</span></button>'}).join('')+'</div>'+
+    '<p class="compare-note">대중교통은 성인 '+n+'명, 택시·자가용은 차량 1대 기준입니다. '+(n>1?'할인요금은 반영하지 않습니다. ':'')+'승차 대기·주차 이동·차량 유지비는 제외합니다. 입력하지 않은 통행료·주차비는 0원입니다. '+(p&&p.info.offline?'내장 경로는 운행·막차·추가요금을 확인하지 않은 추정입니다.':'')+'</p>';
+  $('reco').hidden=false;
+  Array.prototype.forEach.call($('reco').querySelectorAll('.rr'),function(b){b.onclick=function(){showTab(b.dataset.go);try{$('best').scrollIntoView({behavior:'smooth',block:'start'})}catch(e){}}});
+}
+function transitNote(p){
+  var real=!!p,offline=real&&p.info.offline;
+  $('trSub').textContent=real?(offline?'내장 노선망 계산(추정·운행 여부 미확인)':'ODsay 실경로'):'경로 미확인';
+  var ods=S.ods;
+  $('trNote').className='note'+(ods&&ods.err?' err':'');
+  $('trNote').textContent=ods&&ods.err?ods.err+' 선택한 출발시간의 운행 여부·막차·추가요금은 미확인입니다.':(offline?'선택한 출발시간의 운행 여부·막차는 확인하지 않은 OSM 노선 추정입니다. 급행·배차간격·신분당선 등 별도요금은 반영되지 않습니다. 정확한 값은 ODsay 키나 아래 지도앱으로 확인하세요.':(real?'출발시간이 아닌 현재 시각 기준 경로입니다.':'대중교통 경로·요금은 미확인입니다. 아래 지도앱에서 확인하세요.'));
+  var fv=real&&p.subPath.some(function(z){return z.verified});
+  var fe=real&&p.subPath.some(function(z){return z.estimate});
+  if(fv&&!fe)$('trNote').textContent='역까지 가는 버스는 ODsay로 확인한 노선('+FEEDER_DATE+')입니다. 버스 대기 5분은 추정이며 배차·노선은 바뀔 수 있습니다. '+$('trNote').textContent;
+  else if(fe)$('trNote').textContent='지하철역까지 도보 '+walkLimit()+'분을 넘는 구간은 버스로 이동하며 시간·노선을 추정한 값입니다(정류장 도보 3분+대기 6분+승차). 노선 번호는 아래 지도앱 버튼으로 확인하세요. '+$('trNote').textContent;
+  else if(real&&p.info.busReal)$('trNote').textContent='도보 '+walkLimit()+'분을 넘는 역 구간은 ODsay 버스 노선으로 바꿔 계산했습니다. '+$('trNote').textContent;
+  if(!liveDeparture(S.dt))$('trNote').textContent+=' 예약한 출발시간의 운행·교통상황은 예측하지 않습니다.';
+  $('trNoteBox').open=!!(ods&&ods.err)||!real||!liveDeparture(S.dt);
+}
 function drawTransit(i){
-  S.trIdx=i;
   var paths=S.paths,real=paths&&paths.length;
+  S.trIdx=real?Math.max(0,Math.min(i,paths.length-1)):0;i=S.trIdx;
+  renderComparison();transitNote(real?paths[i]:null);
   Array.prototype.forEach.call($('trOpts').children,function(b,k){b.classList.toggle('on',k===i)});
   if(real){
     var p=paths[i],rides=p.subPath.filter(function(s){return s.trafficType!==3});
     var chipRow=rides.map(function(s){var r=rideInfo(s);return lchip(r.n,r.c)}).join('<span style="color:var(--ink2)"> → </span>');
-    var arrT=hhmm(new Date(S.dt.getTime()+p.info.totalTime*60000));
+    var arrT=arrivalAt(S.dt,p.info.totalTime);
     $('trSummary').innerHTML='<div class="mt-grid">'+
       '<div class="mt main"><div><span class="mt-l">소요시간</span><b class="mt-v">'+mm(p.info.totalTime)+'</b></div><span class="mt-r">도착 '+arrT+'</span></div>'+
-      '<div class="mt"><span class="mt-l">요금'+(p.info.offline?' (추정)':'')+'</span><b class="mt-v">'+won(p.info.payment)+'</b></div>'+
+      '<div class="mt"><span class="mt-l">요금'+(p.info.offline?' (추정)':'')+'</span><b class="mt-v">'+won(p.info.payment)+' / 1인</b></div>'+
       '<div class="mt"><span class="mt-l">환승</span><b class="mt-v">'+transferCount(p.info)+'회</b></div>'+
       '<div class="mt"><span class="mt-l">출발</span><b class="mt-v">'+hhmm(S.dt)+'</b></div></div>'+
       '<div class="routechips"><span>이용 노선</span>'+(chipRow||'도보')+'</div>';
@@ -1077,16 +1143,10 @@ function drawTransit(i){
     var first=rides.filter(function(s){return s.trafficType===1})[0];
     setArrStn(first?first.startName:(S.so[0]&&S.so[0].name));
   }else{
-    var e=S.est;
-    var arrE=hhmm(new Date(S.dt.getTime()+e.total*60000));
-    $('trSummary').innerHTML='<div class="mt-grid">'+
-      '<div class="mt main"><div><span class="mt-l">예상 소요시간</span><b class="mt-v">'+mm(e.total)+'</b></div><span class="mt-r">도착 '+arrE+'</span></div>'+
-      '<div class="mt"><span class="mt-l">예상 요금</span><b class="mt-v">'+won(e.fare)+'</b></div>'+
-      '<div class="mt"><span class="mt-l">출발</span><b class="mt-v">'+hhmm(S.dt)+'</b></div>'+
-      '<div class="mt"><span class="mt-l">정확도</span><b class="mt-v">추정</b></div></div>';
-    $('trTl').innerHTML=estTimelineHtml(e,S.o,S.d);
-    drawSegs('map-transit',estToSegs(e,S.o,S.d),S.o,S.d);
-    setArrStn(S.so[0]&&S.so[0].name);
+    $('trSummary').innerHTML='<p class="note err">대중교통 경로와 요금을 확인하지 못했습니다. 아래 지도앱에서 버스·철도 운행을 확인하세요.</p>';
+    $('trTl').innerHTML='<li><b>출발</b> '+esc(S.o.name)+'</li><li><b>도착</b> '+esc(S.d.name)+'</li>';
+    drawSegs('map-transit',{segs:[],marks:[]},S.o,S.d);
+    setArrStn('');
   }
 }
 function setArrStn(n){var c=S.arrStn!==n;S.arrStn=n||'';$('arrStn').textContent=n||'-';if(c){$('arrList').innerHTML='';$('arrNote').textContent='';if(n)loadArrivals()}}
@@ -1098,25 +1158,9 @@ function render(fresh){
   var anyA=[o,d].some(function(p){return p.approx});
   $('geoWarn').hidden=!w.length;$('geoWarn').innerHTML=w.join('<br>')+(anyA?'<br><span style="color:var(--ink2);font-size:12.5px">정확히 하려면 지도앱에서 위치를 길게 눌러 복사한 "위도,경도"를 입력하거나, 설정에 카카오 REST 키를 넣으세요.</span>':'');
   var real=paths&&paths.length,offline=real&&paths[0].info.offline;
-  var tMin=real?paths[0].info.totalTime:S.est.total;
   var tf=trafficFactor(dt),dur=adjDur(dr,tf,S.exd),durMin=dur/60,exMin=S.exd&&!S.exd.err?Math.round(S.exd.delaySec/60):0;
   var tx=taxiCalc(dr.dist,dur,dt),car=carCost(dr.dist);
-  var cand=[['transit',tMin],['taxi',durMin],['car',durMin]];
-  var win=cand.slice().sort(function(a,b){return a[1]-b[1]})[0][0];
-  var tab=function(k,label,min){return '<button role="tab" data-tab="'+k+'">'+(win===k?'<em class="badge">최단</em>':'')+ICS[k]+'<span class="m">'+label+'</span><span class="f">'+mm(min)+'</span></button>'};
-  $('best').innerHTML=tab('transit','대중교통',tMin)+tab('taxi','택시',durMin)+tab('car','자가용',durMin);
-  // 결과 요약(추천) 카드
-  var tFare=real?paths[0].info.payment:S.est.fare,xFare=tx.total,cFare=car.total;
-  var RR=[['transit','대중교통',tMin,tFare,(real&&!offline)?'':'약 '],['taxi','택시',durMin,xFare,'약 '],['car','자가용',durMin,cFare,'약 ']];
-  var cheap=RR.slice().sort(function(a,b){return a[3]-b[3]})[0][0],W=RR.filter(function(r){return r[0]===win})[0];
-  var arrAt=function(m){return hhmm(new Date(dt.getTime()+m*60000))};
-  var subTxt=win==='transit'?(W[4]+won(W[3])+' · 환승 '+(real?transferCount(paths[0].info):'-')+'회'):(W[4]+won(W[3])+' · 도로 '+km(dr.dist));
-  $('reco').innerHTML='<div class="reco-top"><span>가장 빠른 방법</span><span>'+hhmm(dt)+' 출발 · 도착 '+arrAt(W[2])+'</span></div>'+
-    '<div class="reco-main"><span class="reco-mode">'+W[1]+'</span><span class="reco-time">'+mm(W[2])+'</span></div><div class="reco-sub">'+subTxt+'</div>'+
-    '<div class="reco-rows">'+RR.map(function(r){return '<button class="rr" data-go="'+r[0]+'"><span class="rr-n">'+ICS[r[0]]+r[1]+(r[0]===win?' <span class="tag">최단</span>':'')+(r[0]===cheap?' <span class="tag alt">최저비용</span>':'')+'</span><span class="rr-t">'+mm(r[2])+'</span><span class="rr-f">'+r[4]+won(r[3])+'</span></button>'}).join('')+'</div>';
-  $('reco').hidden=false;
-  Array.prototype.forEach.call($('reco').querySelectorAll('.rr'),function(b){b.onclick=function(){showTab(b.dataset.go);try{$('best').scrollIntoView({behavior:'smooth',block:'start'})}catch(e){}}});
-  Array.prototype.forEach.call($('best').children,function(b){b.onclick=function(){showTab(b.dataset.tab)}});
+  renderComparison();
 
   $('walkSub').textContent='도보 '+walkLimit()+'분 초과 시 버스 이용';
   var sth=function(label,arr,pt,first){
@@ -1129,21 +1173,12 @@ function render(fresh){
   };
   $('walkBox').innerHTML=sth('출발지 주변',S.so,S.o,true)+'<div style="height:6px"></div>'+sth('도착지 주변',S.sd,S.d,false)+((S.so[0]&&farAccess(S.so[0].dist))||(S.sd[0]&&farAccess(S.sd[0].dist))?'<p class="note">가장 가까운 역까지 도보 '+walkLimit()+'분을 넘어 버스로 역까지 이동하는 경로로 계산합니다. 후보 역 3곳 중 가장 빠른 조합을 고릅니다.</p>':'');
 
-  $('trSub').textContent=real?(offline?'내장 노선망 계산(추정·운행 여부 미확인)':'ODsay 실경로'):'추정 (노선 없음)';
+  $('trSub').textContent=real?(offline?'내장 노선망 계산(추정·운행 여부 미확인)':'ODsay 실경로'):'경로 미확인';
   $('trOpts').innerHTML=real?paths.map(function(p,i){return '<button data-i="'+i+'">'+(i===0?'최단 ':'대안'+i+' ')+mm(p.info.totalTime)+'</button>'}).join(''):'';
   Array.prototype.forEach.call($('trOpts').children,function(b){b.onclick=function(){drawTransit(+b.dataset.i)}});
-  var ods=S.ods;
-  $('trNote').className='note'+(ods&&ods.err?' err':'');
-  $('trNote').textContent=ods&&ods.err?ods.err+' 선택한 출발시간의 운행 여부·막차·추가요금은 미확인입니다.':(S.filt?'도보로 가는 지하철역을 가장 가까운 역 기준 경로로 좁혔습니다. 설정에서 3곳 비교로 바꿀 수 있습니다.':offline?'선택한 출발시간의 운행 여부·막차는 확인하지 않은 OSM 노선 추정입니다. 급행·배차간격·신분당선 등 별도요금은 반영되지 않습니다. 정확한 값은 ODsay 키나 아래 지도앱으로 확인하세요.':(real?'출발시간이 아닌 현재 시각 기준 경로입니다.':'경로를 찾지 못해 거리로만 추정했습니다. 선택한 시간의 운행 여부는 아래 지도앱에서 확인하세요.'));
-  var fv=real&&paths[0].subPath.some(function(z){return z.verified});
-  var fe=real&&paths[0].subPath.some(function(z){return z.estimate});
-  if(fv&&!fe)$('trNote').textContent='역까지 가는 버스는 ODsay로 확인한 노선('+FEEDER_DATE+')입니다. 버스 대기 5분은 추정이며 배차·노선은 바뀔 수 있습니다. '+$('trNote').textContent;
-  else if(fe)$('trNote').textContent='지하철역까지 도보 '+walkLimit()+'분을 넘는 구간은 버스로 이동하며 시간·노선을 추정한 값입니다(정류장 도보 3분+대기 6분+승차). 노선 번호는 아래 지도앱 버튼으로 확인하세요. '+$('trNote').textContent;
-  else if(real&&paths[0].info.busReal)$('trNote').textContent='도보 '+walkLimit()+'분을 넘는 역 구간은 ODsay 버스 노선으로 바꿔 계산했습니다. '+$('trNote').textContent;
-  $('trNoteBox').open=!!(ods&&ods.err);
   $('trLinks').innerHTML=links(o,d);
 
-  var arrD=hhmm(new Date(dt.getTime()+dur*1000));
+  var arrD=arrivalAt(dt,durMin);
   var tiles=function(label,val,right,extra){return '<div class="mt-grid"><div class="mt main"><div><span class="mt-l">'+label+'</span><b class="mt-v">'+val+'</b></div><span class="mt-r">'+right+'</span></div>'+
     '<div class="mt"><span class="mt-l">소요</span><b class="mt-v">'+mm(durMin)+'</b></div><div class="mt"><span class="mt-l">도착</span><b class="mt-v">'+arrD+'</b></div><div class="mt"><span class="mt-l">거리</span><b class="mt-v">'+km(dr.dist)+'</b></div></div>'};
   $('taxiBox').innerHTML=tiles('예상 요금',won(tx.total),'범위 '+won(tx.metered*0.9+tx.toll)+' ~ '+won(tx.metered*1.15+tx.toll))+
@@ -1154,7 +1189,7 @@ function render(fresh){
     '<div class="kv"><span>할증</span><b>'+(tx.nr>1?Math.round((tx.nr-1)*100)+'% 심야':'없음')+'</b></div>'+
     '<div class="kv"><span>통행료</span><b>'+won(num('ttoll',0))+'</b></div>'+
     (exMin>0?'<div class="kv"><span>고속도로 정체 지연</span><b style="color:var(--warn)">+'+exMin+'분 반영</b></div>':'')+'</div>'+
-    '<p class="note">'+(dr.approx?'도로 조회 실패 · 거리·요금은 대략 추정입니다. ':'')+'혼잡계수 ×'+tf.toFixed(2)+' · 통행료는 설정에서 입력하면 합산됩니다.</p>';
+    '<p class="note">'+(dr.approx?'도로 조회 실패 · 거리·요금은 대략 추정입니다. ':'')+'서울 중형택시 요율 가정 · 지역·시계외 할증은 미반영입니다. 시간대 혼잡 추정 ×'+tf.toFixed(2)+' · 통행료는 설정에서 입력하면 합산됩니다.</p>';
   $('carBox').innerHTML=tiles('총 비용',won(car.total),'연료 · 통행 · 주차 합계')+
     '<div style="margin-top:6px">'+
     '<div class="kv"><span>연료비</span><b>'+won(car.fuel)+'</b></div>'+
@@ -1166,26 +1201,33 @@ function render(fresh){
   var exh=exCardHtml();$('exBox-taxi').innerHTML=exh;$('exBox-car').innerHTML=exh;
 
   $('result').hidden=false;
-  S.trIdx=0;showTab(S.tab||'transit');
+  showTab(S.tab||'transit');
   if(fresh){collapseForm();try{$('formBox').scrollIntoView({behavior:'smooth',block:'start'})}catch(e){}}else updateFab();
 }
 
 /* ---- 실행 ---- */
+function lockTrip(busy){
+  ['from','to','when','people','swap','now','fsSwap','fsEdit','fsNew'].concat(SET).forEach(function(id){$(id).disabled=busy});
+  Array.prototype.forEach.call(document.querySelectorAll('.chips button,.hist button,[data-save]'),function(b){b.disabled=busy});
+  $('formBox').setAttribute('aria-busy',busy?'true':'false');
+}
 function run(){
   if($('go').disabled)return;
   hideSug('from');hideSug('to');
   var fq=$('from').value.trim(),tq=$('to').value.trim();
   if(!fq||!tq){status('출발지와 도착지를 모두 입력하세요.',true);return}
   var bad=validateSettings();if(bad){status(bad,true);return}
-  if(fq===tq){status('출발지와 도착지가 같습니다. 다른 장소를 입력하세요.',true);return}
-  var dt=$('when').value?new Date($('when').value):new Date();
+  var fp=PICK.from?Object.assign({},PICK.from):null,tp=PICK.to?Object.assign({},PICK.to):null,n=people();
+  if(fq===tq&&!(validPick(fp)&&validPick(tp)&&hav(fp,tp)>=1)){status('출발지와 도착지가 같습니다. 다른 장소를 입력하세요.',true);return}
+  var dt=departure($('when').value);
   if(!isFinite(dt.getTime())){status('출발시간을 확인하세요.',true);return}
   var keepY=KEEP_POS?(window.scrollY||document.documentElement.scrollTop):null;
   if(!KEEP_POS)$('result').hidden=true;
   $('go').disabled=true;$('go').textContent='계산 중…';status('위치를 찾는 중…');
-  Promise.resolve().then(function(){return Promise.all([geocodeField('from'),geocodeField('to')])}).then(function(r){
+  lockTrip(true);
+  return Promise.resolve().then(function(){return Promise.all([geocodeField('from',fq,fp),geocodeField('to',tq,tp)])}).then(function(r){
     var o=r[0],d=r[1];if(hav(o,d)<1)throw new Error('두 장소의 위치가 같습니다. 검색 결과 또는 좌표를 확인하세요.');status('도로 경로와 대중교통을 조회하는 중…');
-    return Promise.all([driveRoute(o,d).catch(function(){var dist=hav(o,d)*1.4;return {dist:dist,dur:dist/1000/35*3600,geo:[[o.lat,o.lng],[d.lat,d.lng]],hw:[],approx:true}}),exFetch(),odsay(o,d).catch(function(e){return {err:e.message==='Failed to fetch'?'ODsay 호출이 차단되었습니다. 키 발급 시 등록한 웹 URL이 이 주소와 같은지 확인하세요.':e.message}})]).then(function(x){
+    return Promise.all([driveRoute(o,d).catch(function(){var dist=hav(o,d)*1.4;return {dist:dist,dur:dist/1000/35*3600,geo:[[o.lat,o.lng],[d.lat,d.lng]],hw:[],approx:true}}),liveDeparture(dt)?exFetch():Promise.resolve({future:true}),odsay(o,d).catch(function(e){return {err:e.message==='Failed to fetch'?'ODsay 호출이 차단되었습니다. 키 발급 시 등록한 웹 URL이 이 주소와 같은지 확인하세요.':e.message}})]).then(function(x){
       var so=nearStations(o),sd=nearStations(d);
       var od=x[2],filt=false;
       if(od&&!od.err&&od.length&&so.length===1&&sd.length===1){
@@ -1217,26 +1259,35 @@ function run(){
       status('고속도로 실시간 정체를 확인하는 중…');
       var enh=(off&&off.length)?enhanceFeeder(off[0],o,d).catch(function(){}):Promise.resolve();
       return Promise.all([exDelay(x[0],x[1]),enh]).then(function(rr){var exd=rr[0];
-        S={o:o,d:d,dt:dt,dr:x[0],ex:x[1],exd:exd,ods:od,filt:filt,paths:real?od:off,walkRule:walkRule,so:so,sd:sd,est:transitEstimate(o,d,so,sd),tab:S.tab};
-        var fresh=!KEEP_POS;KEEP_POS=false;render(fresh);status('');saveHist(fq,tq);if(keepY!==null){window.scrollTo(0,keepY);setTimeout(function(){window.scrollTo(0,keepY)},350)}
+        var paths=real?od:off;if(paths)paths.sort(function(a,b){return a.info.totalTime-b.info.totalTime});
+        S={o:o,d:d,dt:dt,people:n,input:{f:fq,t:tq},trIdx:0,dr:x[0],ex:x[1],exd:exd,ods:od,filt:filt,paths:paths,walkRule:walkRule,so:so,sd:sd,est:transitEstimate(o,d,so,sd),tab:S.tab};
+        var fresh=!KEEP_POS;KEEP_POS=false;render(fresh);status('');saveHist(fq,tq,o,d,n);LS.set('rt_people',String(n));if(keepY!==null){window.scrollTo(0,keepY);setTimeout(function(){window.scrollTo(0,keepY)},350)}
       });
     });
   }).catch(function(e){status(e.name==='AbortError'?'응답이 늦습니다. 잠시 후 다시 시도하세요.':e.message,true)})
-    .then(function(){KEEP_POS=false;$('go').disabled=false;$('go').textContent='경로 계산'});
+    .finally(function(){KEEP_POS=false;lockTrip(false);$('go').disabled=false;$('go').textContent='경로 계산'});
 }
 
 /* ---- 기록 · 설정 ---- */
-function readHist(){try{var a=JSON.parse(LS.get('rt_hist','[]'));return Array.isArray(a)?a.filter(function(x){return x&&typeof x.f==='string'&&typeof x.t==='string'}).slice(0,8):[]}catch(e){return []}}
-function saveHist(f,t){
+function readHist(){try{var a=JSON.parse(LS.get('rt_hist','[]'));return Array.isArray(a)?a.filter(function(x){return x&&typeof x.f==='string'&&x.f.trim()&&typeof x.t==='string'&&x.t.trim()}).slice(0,8):[]}catch(e){return []}}
+function savedLocation(p,label){if(!validPick(p))return null;return {label:label,lat:p.lat,lng:p.lng,addr:p.addr||'',approx:!!p.approx,relaxed:!!p.relaxed,used:p.used||'',note:p.note||''}}
+function histKey(x){return [x.f,x.t].concat([x.from,x.to].map(function(p){return validPick(p)?p.lat.toFixed(6)+','+p.lng.toFixed(6):''})).join('|')}
+function saveHist(f,t,o,d,n){
   var a=[];try{a=readHist()}catch(e){}
-  a=a.filter(function(x){return !(x.f===f&&x.t===t)});a.unshift({f:f,t:t});a=a.slice(0,8);
+  var entry={f:f,t:t,from:savedLocation(o,f),to:savedLocation(d,t),people:n||1};
+  a=a.filter(function(x){return histKey(x)!==histKey(entry)});a.unshift(entry);a=a.slice(0,8);
   LS.set('rt_hist',JSON.stringify(a));renderHist();
+}
+function restoreHist(x){
+  $('from').value=x.f;$('to').value=x.t;clearPick('from');clearPick('to');
+  PICK.from=savedLocation(x.from,x.f);PICK.to=savedLocation(x.to,x.t);showPick('from');showPick('to');
+  $('people').value=String([1,2,3,4].indexOf(x.people)>-1?x.people:1);hideSug('from');hideSug('to');setNow();return run();
 }
 function renderHist(){
   var a=[];try{a=readHist()}catch(e){}
   $('histBox').hidden=!a.length;
   $('hist').innerHTML=a.map(function(x,i){return '<button data-i="'+i+'">'+esc(x.f)+' → '+esc(x.t)+'</button>'}).join('');
-  Array.prototype.forEach.call($('hist').querySelectorAll('button'),function(b){b.onclick=function(){var x=a[+b.dataset.i];$('from').value=x.f;$('to').value=x.t;clearPick('from');clearPick('to');hideSug('from');hideSug('to');setNow();run()}});
+  Array.prototype.forEach.call($('hist').querySelectorAll('button'),function(b){b.onclick=function(){restoreHist(a[+b.dataset.i])}});
 }
 function chips(id,arr,target){
   $(id).innerHTML=arr.map(function(s){return '<button type="button" class="chip">'+esc(s)+'</button>'}).join('');
@@ -1244,11 +1295,13 @@ function chips(id,arr,target){
 }
 var RULES={tbase:[4800,false],tbasem:[1600,false],tunit:[131,false],ttoll:[0,true],kmpl:[9,false],fuel:[1700,false],toll:[0,true],park:[0,true],subfare:[1550,false],walklim:[7,false]};
 function validateSettings(){
+  if(['1','2','3','4'].indexOf($('people').value)<0)return '동행 인원을 1~4명 중에서 선택하세요.';
+  if(['3.5','4.5','5.5'].indexOf($('wspd').value)<0||['1','3'].indexOf($('nearn').value)<0)return '도보 속도와 주변 역 설정을 다시 선택하세요.';
   for(var k in RULES){var v=String($(k).value).replace(/,/g,'').trim(),n=Number(v),r=RULES[k];
     if(!v||!isFinite(n)||n<0||(!r[1]&&n===0)){var label=document.querySelector('label[for="'+k+'"]');return (label?label.textContent:k)+' 값을 '+(r[1]?'0 이상':'0보다 크게')+' 입력하세요.'}}
   return '';
 }
-var SET=['odsay','nearn','walklim','wspd','subfare','kakao','tbase','tbasem','tunit','ttoll','kmpl','fuel','toll','park'];
+var SET=['people','odsay','nearn','walklim','wspd','subfare','kakao','tbase','tbasem','tunit','ttoll','kmpl','fuel','toll','park'];
 function loadSet(){SET.forEach(function(k){var v=LS.get('rt_'+k,null);if(v!==null)$(k).value=v})}
 Array.prototype.forEach.call(document.querySelectorAll('[data-save]'),function(b){b.onclick=function(){
   var bad=validateSettings();if(bad){status(bad,true);return}
@@ -1261,10 +1314,10 @@ $('trTl').addEventListener('click',function(e){
 });
 var KEEP_POS=false;   // 설정 저장 후 재계산 때는 화면 위치를 유지
 /* ---- 검색 후 입력창 접기 / 새 검색으로 쉽게 돌아가기 ---- */
-function fmtHM(d){return pad(d.getHours())+':'+pad(d.getMinutes())}
+function fmtHM(d){return hhmm(d)}
 function collapseForm(){
-  $('fsFrom').textContent=$('from').value.trim();$('fsTo').textContent=$('to').value.trim();
-  var d=S.dt||new Date();$('fsTime').textContent=(d.getMonth()+1)+'/'+d.getDate()+' '+fmtHM(d)+' 출발 · 눌러서 수정';
+  $('fsFrom').textContent=S.input.f;$('fsTo').textContent=S.input.t;
+  var d=S.dt||new Date(),t=kst(d);$('fsTime').textContent=(t.getUTCMonth()+1)+'/'+t.getUTCDate()+' '+fmtHM(d)+' 출발 · '+(S.people||1)+'명 · 눌러서 수정';
   $('formSum').hidden=false;$('formBox').classList.add('collapsed');
   try{if(!(history.state&&history.state.rc))history.pushState({rc:1},'')}catch(e){}
   updateFab();
@@ -1283,7 +1336,7 @@ $('fsSwap').onclick=function(){$('swap').onclick();run()};
 window.addEventListener('scroll',updateFab,{passive:true});
 window.addEventListener('popstate',function(){if($('formBox').classList.contains('collapsed'))expandForm(false)});
 $('go').onclick=run;$('now').onclick=setNow;$('arrBtn').onclick=function(){arrCache={};loadArrivals();if(S.paths)fillArrivals(S.paths[S.trIdx||0])};
-setInterval(function(){if(!document.hidden&&S.paths&&S.tab==='transit'&&!$('result').hidden){Object.keys(arrCache).forEach(function(k){if(k.charAt(0)==='s')delete arrCache[k]});fillArrivals(S.paths[S.trIdx||0],true)}},30000);
+setInterval(function(){if(!document.hidden&&S.paths&&S.tab==='transit'&&!$('result').hidden){Object.keys(arrCache).forEach(function(k){if(k.charAt(0)==='s')delete arrCache[k]});fillArrivals(S.paths[S.trIdx||0],true);loadArrivals()}},30000);
 $('swap').onclick=function(){var a=$('from').value;$('from').value=$('to').value;$('to').value=a;var pa=PICK.from;PICK.from=PICK.to;PICK.to=pa;showPick('from');showPick('to');hideSug('from');hideSug('to')};
 ['from','to'].forEach(function(id){$(id).addEventListener('keydown',function(e){if(e.key==='Enter')run()})});
 chips('chipsFrom',FAVS,'from');chips('chipsTo',FAVS,'to');
